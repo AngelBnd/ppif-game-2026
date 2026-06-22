@@ -1,5 +1,5 @@
 import BottomFrame from '@/Components/global/BottomBar';
-import Navbar from '@/Components/global/Navbar';
+import TopBar from '@/Components/global/TopBar';
 import ModelBackground from '@/Components/three/ModelBackground';
 import type { ReactNode } from 'react';
 
@@ -24,7 +24,7 @@ export default function AppLayout({
                 )}
 
                 <div className="relative z-10">
-                    <Navbar />
+                    <TopBar />
 
                     <main className="min-h-screen">{children}</main>
 
