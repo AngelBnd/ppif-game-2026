@@ -14,6 +14,8 @@ export default {
         extend: {
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
+                noto : ['NotoCustom', "sans-serif"],
+                arsenal : ["Arsenal", "sans-serif"]
             },
         },
     },

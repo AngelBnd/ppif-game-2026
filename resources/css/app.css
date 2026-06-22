@@ -1,3 +1,49 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@font-face {
+  font-family: "NotoCustom";
+  src: url("/fonts/Noto-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+
+@font-face {
+  font-family: "Arsenal";
+  src: url("/fonts/Arsenal-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+.navbar-video-mask {
+    width: 100vw;
+    aspect-ratio: 1920 / 180;
+
+    mask-image: url('/masks/NavbarSVG-White.svg');
+    mask-repeat: no-repeat;
+    mask-position: top center;
+    mask-size: 100% auto;
+
+    -webkit-mask-image: url('/masks/NavbarSVG-White.svg');
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: top center;
+    -webkit-mask-size: 100% auto;
+}
+
+.bottomFrame-video-mask {
+    width: 100vw;
+    aspect-ratio: 1920 / 180;
+    overflow: hidden;
+
+    mask-image: url('/masks/BottomSVG.svg');
+    mask-repeat: no-repeat;
+    mask-position: bottom center;
+    mask-size: 100% 100%;
+
+    -webkit-mask-image: url('/masks/BottomSVG.svg');
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: bottom center;
+    -webkit-mask-size: 100% 100%;
+}
