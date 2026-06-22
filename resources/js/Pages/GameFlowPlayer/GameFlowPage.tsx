@@ -15,6 +15,7 @@ export default function PlayerFlowPage() {
     const navigate = useNavigate();
 
     const step = playerGameFlow.find((item) => item.slug === stepId);
+  
 
     if (!step) {
         return (
@@ -67,7 +68,7 @@ export default function PlayerFlowPage() {
             )}
 
             {step.type === "answer" && (
-                <AnswerTheQuestionPage step={step}  />
+                <AnswerTheQuestionPage step={step} question={step.question}  />
             )}
 
             {step.type === "activity" && (

@@ -98,7 +98,7 @@ export const playerGameFlow: PlayerFlowStep[] = [
         title: "Answer The Question",
         slug: "answer-3",
         next: "epilogue-1",
-        question: "Question 3 placeholder",
+        question: "Apa yang dilakukan oleh bayang-bayang dalam Universe Commitment?",
         correctAnswer: "Answer 3 placeholder",
     },
     {
