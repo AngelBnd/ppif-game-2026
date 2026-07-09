@@ -47,3 +47,12 @@
     -webkit-mask-position: bottom center;
     -webkit-mask-size: 100% 100%;
 }
+/* ---------- Rotate-device overlay ---------- */
+.rotate-overlay {
+  display: none;
+}
+@media (max-width: 900px) and (orientation: portrait) {
+  .rotate-overlay {
+    display: flex;
+  }
+}
