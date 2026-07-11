@@ -1,7 +1,10 @@
 import BossHealthBar from '@/Components/monitor/BossHealth';
 import { TeamHP } from '@/Components/monitor/TeamHP';
+import BOSS from '@/assets/monitor/BOSS.svg?react';
+import BOSSBG from '@/assets/monitor/BOSSBG.svg?react';
 import Codie from '@/assets/monitor/CODDDIE.svg?react';
 import CrossHair from '@/assets/monitor/CROSSHAIR.svg?react';
+import FIGHT from '@/assets/monitor/FGHT.svg?react';
 import Fire from '@/assets/monitor/FIRE.svg?react';
 import QuestBox from '@/assets/monitor/QuestBox.svg?react';
 import Bullets from '@/assets/monitor/bullets.svg?react';
@@ -43,6 +46,10 @@ export default function BossFightPage({ step }: Props) {
     const bossHealthRef = useRef<HTMLDivElement>(null);
     const questBoxRef = useRef<HTMLDivElement>(null);
     const teamHPContainerRef = useRef<HTMLDivElement>(null);
+    const bossIntroContainerRef = useRef<HTMLDivElement>(null);
+    const bossGroupRef = useRef<HTMLDivElement>(null);
+    const fightRef = useRef<HTMLDivElement>(null);
+    const bossOverlayRef = useRef<HTMLDivElement>(null);
 
     useLayoutEffect(() => {
         const container = containerRef.current;
@@ -176,10 +183,112 @@ export default function BossFightPage({ step }: Props) {
         return () => ctx.revert();
     }, []);
 
+    useLayoutEffect(() => {
+        const container = bossIntroContainerRef.current;
+        const overlay = bossOverlayRef.current;
+        const bossGroup = bossGroupRef.current;
+        const fight = fightRef.current;
+
+        if (!container || !overlay || !bossGroup || !fight) return;
+
+        const ctx = gsap.context(() => {
+            const timeline = gsap.timeline();
+
+            timeline
+                // Fade in the black overlay
+                .fromTo(
+                    overlay,
+                    {
+                        autoAlpha: 0,
+                    },
+                    {
+                        autoAlpha: 0.85,
+                        duration: 0.2,
+                        ease: 'power2.out',
+                    },
+                )
+
+                // BOSS + BOSSBG enter from top-left
+                .fromTo(
+                    bossGroup,
+                    {
+                        xPercent: -300,
+                        yPercent: -120,
+                        autoAlpha: 0,
+                    },
+                    {
+                        xPercent: 0,
+                        yPercent: 0,
+                        autoAlpha: 1,
+                        duration: 0.35,
+                        ease: 'power3.out',
+                    },
+                    '-=0.1',
+                )
+
+                // FIGHT enters from bottom-right at almost the same time
+                .fromTo(
+                    fight,
+                    {
+                        xPercent: 300,
+                        yPercent: 120,
+                        autoAlpha: 0,
+                    },
+                    {
+                        xPercent: 0,
+                        yPercent: 0,
+                        autoAlpha: 1,
+                        duration: 0.35,
+                        ease: 'power3.out',
+                    },
+                    '-=0.3',
+                )
+
+                // Stay visible
+                .to({}, { duration: 1 })
+
+                // Both exit at the same time
+                .to(
+                    bossGroup,
+                    {
+                        xPercent: -300,
+                        yPercent: -120,
+                        autoAlpha: 0,
+                        duration: 0.35,
+                        ease: 'power3.in',
+                    },
+                    'exit',
+                )
+                .to(
+                    fight,
+                    {
+                        xPercent: 300,
+                        yPercent: 120,
+                        autoAlpha: 0,
+                        duration: 0.35,
+                        ease: 'power3.in',
+                    },
+                    'exit',
+                )
+
+                .to(
+                    overlay,
+                    {
+                        autoAlpha: 0,
+                        duration: 0.25,
+                        ease: 'power2.in',
+                    },
+                    'exit+=0.25',
+                );
+        }, container);
+
+        return () => ctx.revert();
+    }, []);
+
     return (
         <main
             ref={containerRef}
-            className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black text-white"
+            className="relative flex min-h-screen items-center justify-center overflow-hidden text-white"
         >
             <div className="absolute bottom-12 left-4 z-0">
                 <div ref={thingRef} className="absolute -left-8 top-2 z-10">
@@ -249,6 +358,24 @@ export default function BossFightPage({ step }: Props) {
                 />
 
                 <CrossHair className="absolute bottom-0 left-24 z-20 w-[12rem]" />
+            </div>
+            <div
+                ref={bossOverlayRef}
+                className="pointer-events-none absolute inset-0 z-40 bg-black opacity-50"
+            />
+            <div
+                ref={bossIntroContainerRef}
+                className="pointer-events-none absolute left-1/2 top-1/2 z-50 h-[24rem] w-[32rem] -translate-x-1/2 -translate-y-1/2"
+            >
+                <div ref={bossGroupRef} className="absolute inset-0">
+                    <BOSSBG className="absolute -top-12 left-8 z-0 block h-auto w-[21.9rem]" />
+
+                    <BOSS className="absolute left-12 top-[0rem] z-20 block h-auto w-[20rem]" />
+                </div>
+
+                <div ref={fightRef} className="absolute inset-0 z-10">
+                    <FIGHT className="absolute right-2 top-[8rem] block h-auto w-[26rem]" />
+                </div>
             </div>
         </main>
     );
