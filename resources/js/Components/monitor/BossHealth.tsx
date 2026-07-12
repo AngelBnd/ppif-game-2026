@@ -18,7 +18,7 @@ export default function BossHealthBar({
         <div className={`w-[48rem] ${className}`}>
             <Bosshealth className="block h-auto w-full" />
 
-            <div className="absolute left-[12%] top-[20%] z-20 h-[1.4rem] w-[76%] overflow-hidden bg-[#141718]">
+            <div className="absolute left-[12%] z-20 h-[1.4rem] w-[76%] overflow-hidden bg-[#2a3032]">
                 <div
                     className="h-full bg-[#BF1E2E] transition-[width] duration-500 ease-out"
                     style={{
