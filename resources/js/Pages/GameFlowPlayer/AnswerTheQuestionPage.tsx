@@ -161,12 +161,12 @@ export default function AnswerTheQuestionPage({ step, question }: Props) {
 
                         <div
                             ref={chatGroupRef}
-                            className="absolute -right-2 top-20 w-[21rem]"
+                            className="absolute -right-2 top-20 z-30 w-[23rem]"
                         >
                             <div className="relative w-full">
                                 <Chatbox className="h-auto w-full" />
 
-                                <div className="absolute inset-0 left-16 top-2 z-10 flex w-[75%] items-center justify-center p-6 text-left font-arsenal font-bold text-[#F0F2F5]">
+                                <div className="absolute inset-0 left-[5rem] top-2 z-10 flex w-[75%] items-center justify-center p-6 text-left font-arsenal font-bold text-[#F0F2F5]">
                                     {question}
                                 </div>
                             </div>
@@ -191,7 +191,7 @@ export default function AnswerTheQuestionPage({ step, question }: Props) {
                         </div>
                     </div>
 
-                    <div className="relative z-40 flex h-fit flex-col items-center gap-5">
+                    <div className="relative z-40 mt-16 flex h-fit flex-col items-center gap-5">
                         <div className="relative">
                             <input
                                 type="text"
