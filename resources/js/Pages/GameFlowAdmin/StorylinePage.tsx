@@ -1,8 +1,7 @@
-import type { AdminFlowStep } from "../../data/adminGameFlow";
+import type { AdminFlowStep } from '../../data/adminGameFlow';
 
 type Props = {
     step: AdminFlowStep;
-
 };
 
 export default function StorylinePage({ step }: Props) {
@@ -18,8 +17,6 @@ export default function StorylinePage({ step }: Props) {
                 <p className="mt-6 text-xl text-white/60">
                     Placeholder for storyline screen.
                 </p>
-
-       
             </section>
         </main>
     );
