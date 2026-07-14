@@ -211,7 +211,7 @@ export default function BossFightPage({ step }: Props) {
             className="flex h-dvh items-center justify-center"
         >
             <div
-                className="relative h-full w-full max-w-[430px] overflow-hidden bg-slate-700"
+                className="relative h-full w-full max-w-[430px] overflow-hidden"
                 onClick={handleFireTap}
             >
                 <div className="relative top-4 z-40 flex w-full flex-col">

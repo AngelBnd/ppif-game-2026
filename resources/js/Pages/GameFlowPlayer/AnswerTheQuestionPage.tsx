@@ -110,7 +110,7 @@ export default function AnswerTheQuestionPage({ step, question }: Props) {
             ref={containerRef}
             className="flex h-dvh items-center justify-center"
         >
-            <div className="relative h-full w-full max-w-[430px] overflow-hidden bg-slate-700">
+            <div className="relative h-full w-full max-w-[430px] overflow-hidden">
                 <div className="relative z-10 flex h-full flex-col items-center justify-start gap-6">
                     <div className="relative mb-12 flex h-[10rem] w-full justify-between px-2 py-2">
                         <div

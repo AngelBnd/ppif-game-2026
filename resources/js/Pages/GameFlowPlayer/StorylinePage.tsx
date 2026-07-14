@@ -54,7 +54,7 @@ export default function StorylinePage({ step }: Props) {
     return (
         <main
             ref={containerRef}
-            className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#1a1a1a] text-white"
+            className="relative flex min-h-screen items-center justify-center overflow-hidden text-white"
         >
             <div
                 ref={bgRef}
