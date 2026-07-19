@@ -6,7 +6,7 @@ import ActivityPage from './ActivityPage';
 import AnswerTheQuestionPage from './AnswerTheQuestionPage';
 import BossFightPage from './BossFightPage';
 import StorylinePage from './StorylinePage';
-import WaitingRoomPage from './WaitingRoompage';
+import WaitingRoompage from './WaitingRoomPage';
 
 export default function AdminFlowPage() {
     const { stepId } = useParams();
@@ -48,7 +48,7 @@ export default function AdminFlowPage() {
             )}
 
             {step.type === 'waiting' && (
-                <WaitingRoomPage step={step} goNext={goNext} />
+                <WaitingRoompage step={step} goNext={goNext} />
             )}
 
             {step.type === 'story' && <StorylinePage step={step} />}

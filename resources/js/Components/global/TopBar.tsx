@@ -1,8 +1,6 @@
-import { Link } from '@inertiajs/react';
-
 export default function Navbar() {
     return (
-        <nav className="fixed -top-4 left-0 z-0 w-full">
+        <nav className="fixed -top-4 left-0 z-20 w-full">
             <div className="absolute -top-3 left-0 w-full">
                 <div className="navbar-video-mask bg-[#0A0C0F]">
                     <video
@@ -16,8 +14,6 @@ export default function Navbar() {
                     </video>
                 </div>
             </div>
-
-           
         </nav>
     );
 }

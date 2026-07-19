@@ -17,20 +17,16 @@ export default function AppLayout({
     showBackground = true,
 }: AppLayoutProps) {
     return (
+        <div className="relative min-h-screen overflow-hidden bg-[#0d0f13] text-white">
+            {showBackground && <ModelBackground preset={backgroundPreset} />}
 
-            <div className="relative min-h-screen overflow-hidden bg-[#0d0f13] text-white">
-                {showBackground && (
-                    <ModelBackground preset={backgroundPreset} />
-                )}
+            <div className="relative z-40">
+                <TopBar />
 
-                <div className="relative z-10">
-                    <TopBar />
+                <main className="min-h-screen">{children}</main>
 
-                    <main className="min-h-screen">{children}</main>
-
-                    <BottomFrame />
-                </div>
+                <BottomFrame />
             </div>
-  
+        </div>
     );
 }
