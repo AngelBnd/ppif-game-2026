@@ -6,16 +6,45 @@ import InputJawaban from '@/assets/phone/InputJawaban.svg?react';
 import OKbutton from '@/assets/phone/OK.svg?react';
 import Streak from '@/assets/phone/STREAKBG.svg?react';
 import Soalbrp from '@/assets/phone/SoalBerapa.svg?react';
-import { PlayerFlowStep } from '@/data/playerGameFlow';
+import type { Step } from '@/types/step';
 import gsap from 'gsap';
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 type Props = {
-    step: PlayerFlowStep;
+    step: Step;
     question?: string;
+    onSubmit: (
+        answerText: string,
+    ) => Promise<{ is_correct: boolean; response_time_ms: number }>;
 };
 
-export default function AnswerTheQuestionPage({ step, question }: Props) {
+export default function AnswerTheQuestionPage({
+    step,
+    question,
+    onSubmit,
+}: Props) {
     const containerRef = useRef<HTMLElement>(null);
+    const [answerText, setAnswerText] = useState('');
+    const [status, setStatus] = useState<
+        'idle' | 'submitting' | 'submitted' | 'error'
+    >('idle');
+    const [feedback, setFeedback] = useState<string | null>(null);
+
+    const handleSubmit = async () => {
+        if (!answerText.trim() || status === 'submitting' || status === 'submitted') {
+            return;
+        }
+
+        setStatus('submitting');
+
+        try {
+            const result = await onSubmit(answerText.trim());
+            setFeedback(result.is_correct ? 'Correct!' : 'Incorrect.');
+            setStatus('submitted');
+        } catch {
+            setFeedback('Failed to submit, try again.');
+            setStatus('error');
+        }
+    };
 
     const secondsRef = useRef<HTMLDivElement>(null);
     const hpRef = useRef<HTMLDivElement>(null);
@@ -195,6 +224,12 @@ export default function AnswerTheQuestionPage({ step, question }: Props) {
                         <div className="relative">
                             <input
                                 type="text"
+                                value={answerText}
+                                onChange={(e) => setAnswerText(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSubmit();
+                                }}
+                                disabled={status === 'submitting' || status === 'submitted'}
                                 className="absolute left-1/2 top-[1rem] z-30 h-[2.5rem] w-72 -translate-x-1/2 border-0 bg-[#0A0C0F] text-center text-2xl text-white outline-none ring-0 placeholder:text-[#5A5B5C] focus:border-0 focus:outline-none focus:ring-0"
                                 placeholder="Input Jawaban"
                             />
@@ -202,7 +237,18 @@ export default function AnswerTheQuestionPage({ step, question }: Props) {
                             <InputJawaban className="relative block h-auto w-[23rem]" />
                         </div>
 
-                        <OKbutton className="absolute mt-10 w-36 cursor-pointer" />
+                        <div className="relative mt-10 w-36">
+                            <OKbutton
+                                onClick={handleSubmit}
+                                className="w-36 cursor-pointer"
+                            />
+
+                            {feedback && (
+                                <p className="absolute left-1/2 top-full mt-3 w-max -translate-x-1/2 text-center text-sm font-bold text-white">
+                                    {feedback}
+                                </p>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

@@ -2,12 +2,13 @@ import InputBorderBottom from '@/assets/phone/InputBorderBottomSVG.svg?react';
 import InputYourCode from '@/assets/phone/inputurcode.svg?react';
 import Join from '@/assets/phone/JOIN.svg?react';
 import StreakBG from '@/assets/phone/STREAKBG.svg?react';
+import gsap from 'gsap';
 import { useRef, useState } from 'react';
-import type { PlayerFlowStep } from '../../data/playerGameFlow';
+import type { Step } from '@/types/step';
 
 type Props = {
-    step: PlayerFlowStep;
-    goNext: () => void;
+    step: Step;
+    onJoin: (code: string, nickname: string) => Promise<unknown>;
 };
 
 type CodeInputProps = {
@@ -109,16 +110,50 @@ function CodeInput({ length = 6, onComplete, inputBgRefs }: CodeInputProps) {
     );
 }
 
-export default function JoinRoomPage({ step, goNext }: Props) {
+export default function JoinRoomPage({ onJoin }: Props) {
     const [uniqueCode, setUniqueCode] = useState('');
+    const [nickname, setNickname] = useState('');
     const [error, setError] = useState('');
+    const [joined, setJoined] = useState(false);
 
     const formRef = useRef<HTMLDivElement | null>(null);
     const inputBgRefs = useRef<Array<HTMLDivElement | null>>([]);
 
+    const shakeForm = () => {
+        if (!formRef.current) return;
+
+        gsap.fromTo(
+            formRef.current,
+            { x: 0 },
+            {
+                x: 14,
+                duration: 0.06,
+                repeat: 5,
+                yoyo: true,
+                ease: 'power2.inOut',
+                onComplete: () => {
+                    gsap.set(formRef.current, { x: 0 });
+                },
+            },
+        );
+    };
+
     const handleJoin = async () => {
+        if (uniqueCode.length < 6) {
+            setError('Enter the full 6-digit code.');
+            shakeForm();
+            return;
+        }
+
+        if (!nickname.trim()) {
+            setError('Enter a nickname.');
+            shakeForm();
+            return;
+        }
+
         try {
             setError('');
+            await onJoin(uniqueCode, nickname.trim());
 
             const inputBgs = inputBgRefs.current.filter(Boolean);
 
@@ -136,44 +171,50 @@ export default function JoinRoomPage({ step, goNext }: Props) {
                     yoyo: true,
                     ease: 'power2.inOut',
                     onComplete: () => {
-                        // onJoined();
+                        setJoined(true);
                     },
                 },
             );
-        } catch (error) {
+        } catch {
             setError('Invalid unique code.');
-
-            if (formRef.current) {
-                gsap.fromTo(
-                    formRef.current,
-                    { x: 0 },
-                    {
-                        x: 14,
-                        duration: 0.06,
-                        repeat: 5,
-                        yoyo: true,
-                        ease: 'power2.inOut',
-                        onComplete: () => {
-                            gsap.set(formRef.current, { x: 0 });
-                        },
-                    },
-                );
-            }
+            shakeForm();
         }
     };
 
+    if (joined) {
+        return (
+            <main className="flex min-h-screen items-center justify-center text-white">
+                <p className="text-xl font-semibold">
+                    You're in! Waiting for the admin to start...
+                </p>
+            </main>
+        );
+    }
+
     return (
         <main className="relative flex min-h-screen items-center justify-center overflow-hidden text-white">
-            <div className="relative z-10 flex h-screen w-full flex-col items-center">
-                <div className="mt-[18vh]">
+            <div
+                ref={formRef}
+                className="relative z-10 flex h-screen w-full flex-col items-center"
+            >
+                <div className="mt-[14vh]">
                     <InputYourCode className="w-[20em] rotate-[-8deg]" />
                 </div>
+
+                <input
+                    type="text"
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    placeholder="Nickname"
+                    maxLength={30}
+                    className="mt-4 w-64 rounded-lg border border-white/20 bg-black/40 px-4 py-2 text-center text-lg text-white outline-none placeholder:text-white/40 focus:border-white/50"
+                />
 
                 <div className="relative mt-10 h-[2rem] w-[29rem]">
                     <StreakBG className="absolute left-1/2 top-1/2 w-[40rem] -translate-x-1/2 -translate-y-1/2 object-cover" />
                     <div className="absolute -top-6 left-1/2 -translate-x-1/2 -rotate-12">
                         <CodeInput
-                            length={5}
+                            length={6}
                             inputBgRefs={inputBgRefs}
                             onComplete={(value) => {
                                 setUniqueCode(value);
@@ -183,9 +224,15 @@ export default function JoinRoomPage({ step, goNext }: Props) {
                     </div>
                 </div>
 
+                {error && (
+                    <p className="mt-4 text-sm font-semibold text-red-400">
+                        {error}
+                    </p>
+                )}
+
                 <button
-                    onClick={goNext}
-                    className="mt-32 transition-transform hover:scale-105 active:scale-95"
+                    onClick={handleJoin}
+                    className="mt-16 transition-transform hover:scale-105 active:scale-95"
                 >
                     <Join className="w-[24rem]" />
                 </button>

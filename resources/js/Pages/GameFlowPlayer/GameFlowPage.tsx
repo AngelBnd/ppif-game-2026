@@ -1,5 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { playerGameFlow } from '../../data/playerGameFlow';
+import { usePlayerSession } from '@/hooks/usePlayerSession';
+import { useSteps } from '@/hooks/useSteps';
+import { useEffect } from 'react';
 
 import Button from '@/Components/global/Button';
 import NextButton from '@/assets/icons/NextButtonSVG.svg?react';
@@ -12,8 +14,25 @@ import StorylinePage from './StorylinePage';
 export default function PlayerFlowPage() {
     const { stepId } = useParams();
     const navigate = useNavigate();
+    const { steps, isLoading } = useSteps();
+    const { session, joinSession, submitAnswer } = usePlayerSession();
 
-    const step = playerGameFlow.find((item) => item.slug === stepId);
+    // Follows whatever step the admin advances to on the server.
+    useEffect(() => {
+        if (session?.current_step && session.current_step.slug !== stepId) {
+            navigate(`/player/${session.current_step.slug}`, { replace: true });
+        }
+    }, [session?.current_step?.slug, stepId, navigate]);
+
+    const step = steps.find((item) => item.slug === stepId);
+
+    if (isLoading) {
+        return (
+            <main className="flex min-h-screen items-center justify-center bg-black text-white">
+                <p>Loading...</p>
+            </main>
+        );
+    }
 
     if (!step) {
         return (
@@ -24,7 +43,7 @@ export default function PlayerFlowPage() {
                     </h1>
 
                     <button
-                        onClick={() => navigate('/player/join-room')}
+                        onClick={() => navigate('/player/lobby')}
                         className="mt-6 rounded-xl bg-white px-6 py-3 font-semibold text-black"
                     >
                         Back to Join Room
@@ -35,8 +54,10 @@ export default function PlayerFlowPage() {
     }
 
     const goNext = () => {
-        if (step.next) {
-            navigate(`/player/${step.next}`);
+        const next = steps.find((item) => item.order === step.order + 1);
+
+        if (next) {
+            navigate(`/player/${next.slug}`);
         }
     };
 
@@ -59,14 +80,18 @@ export default function PlayerFlowPage() {
                 </div>
             </div>
 
-            {step.type === 'join' && (
-                <JoinRoomPage step={step} goNext={goNext} />
+            {step.type === 'waiting' && (
+                <JoinRoomPage step={step} onJoin={joinSession} />
             )}
 
             {step.type === 'story' && <StorylinePage step={step} />}
 
             {step.type === 'answer' && (
-                <AnswerTheQuestionPage step={step} question={step.question} />
+                <AnswerTheQuestionPage
+                    step={step}
+                    question={step.content?.question}
+                    onSubmit={submitAnswer}
+                />
             )}
 
             {step.type === 'activity' && <ActivityPage step={step} />}

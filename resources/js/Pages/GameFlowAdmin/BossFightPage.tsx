@@ -11,13 +11,13 @@ import Bullets from '@/assets/monitor/bullets.svg?react';
 import PlaceholderBoss from '@/assets/monitor/placeholderboss.png';
 import Taptap from '@/assets/monitor/taptap.svg?react';
 import Thing from '@/assets/monitor/things.svg?react';
-import type { AdminFlowStep } from '../../data/adminGameFlow';
+import type { Step } from '@/types/step';
 
 import gsap from 'gsap';
 import { useLayoutEffect, useRef } from 'react';
 
 type Props = {
-    step: AdminFlowStep;
+    step: Step;
 };
 
 const teams = [

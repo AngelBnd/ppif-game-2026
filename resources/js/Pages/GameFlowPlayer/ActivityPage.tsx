@@ -1,12 +1,12 @@
 import ActivityPayAttention from '@/assets/phone/ActivityPlayer.svg?react';
 import StreakBG from '@/assets/phone/STREAKBG.svg?react';
-import { PlayerFlowStep } from '@/data/playerGameFlow';
+import type { Step } from '@/types/step';
 
 import gsap from 'gsap';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 
 type Props = {
-    step: PlayerFlowStep;
+    step: Step;
 };
 
 export default function StorylinePage({ step }: Props) {

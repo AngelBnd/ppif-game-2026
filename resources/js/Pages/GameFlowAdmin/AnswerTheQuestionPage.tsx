@@ -4,13 +4,13 @@ import HP from '@/assets/monitor/HP.svg?react';
 import Seconds from '@/assets/monitor/SECONDS.svg?react';
 import TriangleThing from '@/assets/monitor/trianglething.svg?react';
 import DialogueBox from '@/Components/monitor/dialogueBox';
-import type { AdminFlowStep } from '../../data/adminGameFlow';
+import type { Step } from '@/types/step';
 
 import gsap from 'gsap';
 import { useLayoutEffect, useRef } from 'react';
 
 type Props = {
-    step: AdminFlowStep;
+    step: Step;
 };
 
 export default function AnswerTheQuestionPage({ step }: Props) {

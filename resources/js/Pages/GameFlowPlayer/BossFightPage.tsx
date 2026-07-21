@@ -8,13 +8,13 @@ import PlaceholderBoss from '@/assets/monitor/placeholderboss.png';
 import Taptap from '@/assets/monitor/taptap.svg?react';
 import Thing from '@/assets/monitor/things.svg?react';
 import Streak from '@/assets/phone/STREAKBG.svg?react';
-import { PlayerFlowStep } from '@/data/playerGameFlow';
+import type { Step } from '@/types/step';
 import { useLayoutEffect, useRef } from 'react';
 
 import gsap from 'gsap';
 
 type Props = {
-    step: PlayerFlowStep;
+    step: Step;
 };
 
 export default function BossFightPage({ step }: Props) {

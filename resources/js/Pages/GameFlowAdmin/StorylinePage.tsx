@@ -1,7 +1,7 @@
-import type { AdminFlowStep } from '../../data/adminGameFlow';
+import type { Step } from '@/types/step';
 
 type Props = {
-    step: AdminFlowStep;
+    step: Step;
 };
 
 export default function StorylinePage({ step }: Props) {

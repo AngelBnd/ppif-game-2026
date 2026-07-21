@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
-import type { AdminFlowStep } from '../../data/adminGameFlow';
+import type { Step } from '@/types/step';
+import type { SessionInfo } from '@/types/gameSession';
 
 type Props = {
-    step: AdminFlowStep;
+    step: Step;
+    session: SessionInfo | null;
     goNext: () => void;
 };
 
-export default function WaitingRoompage({ step, goNext }: Props) {
-    const [pin, setPin] = useState('');
-    const [joinedCount, setJoinedCount] = useState(0);
+export default function WaitingRoompage({ session, goNext }: Props) {
+    const pin = session?.code ?? '';
+    const joinedCount = Math.min(
+        session?.teams.reduce((sum, team) => sum + team.players.length, 0) ?? 0,
+        2,
+    );
     const [pressState, setPressState] = useState<'idle' | 'hover' | 'press'>(
         'idle',
     );
@@ -20,24 +25,13 @@ export default function WaitingRoompage({ step, goNext }: Props) {
         );
     });
 
-    function handlePinChange(e: React.ChangeEvent<HTMLInputElement>) {
-        const digits = e.target.value.replace(/\D/g, '').slice(0, 6);
-        setPin(digits);
-    }
-
-    function handleStart() {
-        if (pin.length < 6 || joinedCount >= 2) return;
-        setJoinedCount((count) => count + 1);
-        setPin('');
-    }
-
     function triggerStart() {
-        if (pin.length < 6 || joinedCount >= 2) return;
+        if (!session) return;
 
         setPressState('hover');
         setTimeout(() => setPressState('press'), 120);
         setTimeout(() => {
-            handleStart();
+            goNext();
             setPressState('idle');
         }, 260);
     }
@@ -213,7 +207,7 @@ export default function WaitingRoompage({ step, goNext }: Props) {
                             pattern="[0-9]*"
                             autoComplete="off"
                             value={pin}
-                            onChange={handlePinChange}
+                            readOnly
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                     e.preventDefault();
@@ -242,8 +236,9 @@ export default function WaitingRoompage({ step, goNext }: Props) {
 
                 <button
                     type="button"
-                    onClick={goNext}
-                    className={`absolute bottom-[30%] left-[25%] w-[20%] -translate-x-1/2 rotate-[2deg] cursor-pointer transition-transform duration-150 ${
+                    onClick={triggerStart}
+                    disabled={!session}
+                    className={`absolute bottom-[30%] left-[25%] w-[20%] -translate-x-1/2 rotate-[2deg] cursor-pointer transition-transform duration-150 disabled:cursor-not-allowed disabled:opacity-60 ${
                         pressState === 'hover'
                             ? 'scale-105'
                             : pressState === 'press'

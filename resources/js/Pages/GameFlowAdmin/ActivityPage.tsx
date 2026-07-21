@@ -1,12 +1,12 @@
 import ActivityBox from '@/assets/monitor/ActivityPleaseFollowModulesInstruction.svg?react';
 import BGCheck from '@/assets/monitor/BGCheck.svg?react';
-import type { AdminFlowStep } from '../../data/adminGameFlow';
+import type { Step } from '@/types/step';
 
 import gsap from 'gsap';
 import { useLayoutEffect, useRef } from 'react';
 
 type Props = {
-    step: AdminFlowStep;
+    step: Step;
 };
 
 export default function ActivityPage({ step }: Props) {

@@ -1,7 +1,9 @@
 import Button from '@/Components/global/Button';
 import NextButton from '@/assets/icons/NextButtonSVG.svg?react';
+import { useAdminSession } from '@/hooks/useAdminSession';
+import { useSteps } from '@/hooks/useSteps';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { adminGameFlow } from '../../data/adminGameFlow';
 import ActivityPage from './ActivityPage';
 import AnswerTheQuestionPage from './AnswerTheQuestionPage';
 import BossFightPage from './BossFightPage';
@@ -11,8 +13,28 @@ import WaitingRoompage from './WaitingRoomPage';
 export default function AdminFlowPage() {
     const { stepId } = useParams();
     const navigate = useNavigate();
+    const { steps, isLoading } = useSteps();
+    const { session, createSession, advanceSession } = useAdminSession();
 
-    const step = adminGameFlow.find((item) => item.slug === stepId);
+    const hasRequestedSession = useRef(false);
+
+    useEffect(() => {
+        if (session || hasRequestedSession.current) return;
+        hasRequestedSession.current = true;
+        createSession().catch(() => {
+            hasRequestedSession.current = false;
+        });
+    }, [session, createSession]);
+
+    const step = steps.find((item) => item.slug === stepId);
+
+    if (isLoading) {
+        return (
+            <main className="flex min-h-screen items-center justify-center bg-black text-white">
+                <p>Loading...</p>
+            </main>
+        );
+    }
 
     if (!step) {
         return (
@@ -31,9 +53,17 @@ export default function AdminFlowPage() {
     }
 
     const goNext = () => {
-        if (step.next) {
-            navigate(`/admin/${step.next}`);
-        }
+        advanceSession()
+            .then((updated) => {
+                if (updated.current_step) {
+                    navigate(`/admin/${updated.current_step.slug}`);
+                }
+            })
+            .catch(() => {
+                // Fall back to local step order if the API call fails.
+                const next = steps.find((item) => item.order === step.order + 1);
+                if (next) navigate(`/admin/${next.slug}`);
+            });
     };
 
     return (
@@ -48,7 +78,7 @@ export default function AdminFlowPage() {
             )}
 
             {step.type === 'waiting' && (
-                <WaitingRoompage step={step} goNext={goNext} />
+                <WaitingRoompage step={step} session={session} goNext={goNext} />
             )}
 
             {step.type === 'story' && <StorylinePage step={step} />}
