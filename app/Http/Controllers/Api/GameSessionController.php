@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Events\PlayerJoined;
+use App\Events\StepAdvanced;
 use App\Http\Resources\GameSessionResource;
 use App\Models\GameSession;
 use App\Models\Step;
 use App\Models\StepProgress;
+use App\Models\Team;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -72,11 +75,14 @@ class GameSessionController extends Controller
             'joined_at' => now(),
         ]);
 
+        $session = $session->fresh(['teams.players', 'currentStep']);
+        event(new PlayerJoined($session));
+
         return response()->json([
             'device_token' => $player->device_token,
             'player' => ['id' => $player->id, 'nickname' => $player->nickname],
             'team' => ['id' => $team->id, 'name' => $team->name],
-            'game_session' => new GameSessionResource($session->load('teams.players', 'currentStep')),
+            'game_session' => new GameSessionResource($session),
         ], 201);
     }
 
@@ -89,7 +95,10 @@ class GameSessionController extends Controller
         if (! $nextStep) {
             $session->update(['status' => 'finished', 'finished_at' => now()]);
 
-            return new GameSessionResource($session->fresh(['teams.players', 'currentStep']));
+            $session = $session->fresh(['teams.players', 'currentStep']);
+            event(new StepAdvanced($session));
+
+            return new GameSessionResource($session);
         }
 
         DB::transaction(function () use ($session, $nextStep) {
@@ -107,9 +116,25 @@ class GameSessionController extends Controller
                 'current_step_id' => $nextStep->id,
                 'status' => 'active',
             ]);
+
+            // Boss fight state (phase/HP) and each team's tap-contribution
+            // meter only ever mean something during the boss step - reset
+            // them fresh every time a session enters it.
+            if ($nextStep->type === 'boss') {
+                $session->update([
+                    'boss_phase' => 1,
+                    'boss_hp' => GameSession::BOSS_PHASE_MAX_HP[1],
+                    'boss_finished_at' => null,
+                ]);
+
+                Team::where('game_session_id', $session->id)->update(['hp' => 0]);
+            }
         });
 
-        return new GameSessionResource($session->fresh(['teams.players', 'currentStep']));
+        $session = $session->fresh(['teams.players', 'currentStep']);
+        event(new StepAdvanced($session));
+
+        return new GameSessionResource($session);
     }
 
     private function generateUniqueCode(): string

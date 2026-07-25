@@ -11,6 +11,15 @@ class GameSession extends Model
 {
     use HasFactory;
 
+    /**
+     * HP per boss phase (1-indexed) and the HP floor in phase 3 that
+     * triggers the scripted "impossible to win" cutscene instead of a
+     * normal phase transition. Placeholder numbers - tune freely.
+     */
+    public const BOSS_PHASE_MAX_HP = [1 => 150, 2 => 150, 3 => 150];
+
+    public const BOSS_PHASE3_CUTSCENE_THRESHOLD = 15;
+
     protected $fillable = [
         'code',
         'class_name',
@@ -18,6 +27,9 @@ class GameSession extends Model
         'current_step_id',
         'started_at',
         'finished_at',
+        'boss_phase',
+        'boss_hp',
+        'boss_finished_at',
     ];
 
     protected function casts(): array
@@ -25,7 +37,13 @@ class GameSession extends Model
         return [
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
+            'boss_finished_at' => 'datetime',
         ];
+    }
+
+    public function bossPhaseMaxHp(): int
+    {
+        return self::BOSS_PHASE_MAX_HP[$this->boss_phase] ?? 0;
     }
 
     public function currentStep(): BelongsTo

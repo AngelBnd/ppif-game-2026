@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\AnswerSubmitted;
 use App\Http\Controllers\Controller;
 use App\Models\Answer;
 use App\Models\GameSession;
@@ -56,6 +57,8 @@ class AnswerController extends Controller
         if ($isCorrect) {
             $player->team->increment('score');
         }
+
+        event(new AnswerSubmitted($session, $answer));
 
         return response()->json([
             'is_correct' => $isCorrect,
