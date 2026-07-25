@@ -17,4 +17,19 @@ export type SessionInfo = {
     started_at: string | null;
     finished_at: string | null;
     teams: TeamInfo[];
+    answered_count: number;
+    boss_phase: number;
+    boss_hp: number;
+    boss_hp_max: number;
+    boss_finished_at: string | null;
+};
+
+export type BossTapResult = {
+    boss_phase: number;
+    boss_hp: number;
+    boss_hp_max: number;
+    phase_changed: boolean;
+    cutscene: boolean;
+    team_id: number;
+    team_hp: number;
 };

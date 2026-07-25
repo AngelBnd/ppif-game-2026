@@ -15,7 +15,8 @@ export default function PlayerFlowPage() {
     const { stepId } = useParams();
     const navigate = useNavigate();
     const { steps, isLoading } = useSteps();
-    const { session, joinSession, submitAnswer } = usePlayerSession();
+    const { session, team, joinSession, submitAnswer, submitBossTap } =
+        usePlayerSession();
 
     // Follows whatever step the admin advances to on the server.
     useEffect(() => {
@@ -90,13 +91,21 @@ export default function PlayerFlowPage() {
                 <AnswerTheQuestionPage
                     step={step}
                     question={step.content?.question}
+                    session={session}
                     onSubmit={submitAnswer}
                 />
             )}
 
             {step.type === 'activity' && <ActivityPage step={step} />}
 
-            {step.type === 'boss' && <BossFightPage step={step} />}
+            {step.type === 'boss' && (
+                <BossFightPage
+                    step={step}
+                    session={session}
+                    team={team}
+                    onTap={submitBossTap}
+                />
+            )}
         </div>
     );
 }

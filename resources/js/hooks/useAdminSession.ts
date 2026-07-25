@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { SessionInfo } from '@/types/gameSession';
+import { echo } from '@/echo';
+import type { BossTapResult, SessionInfo } from '@/types/gameSession';
 
 const STORAGE_KEY = 'ppif_admin_session_code';
 
 export function useAdminSession() {
     const [session, setSession] = useState<SessionInfo | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    // True until the initial check of localStorage for a saved session PIN
+    // has resolved one way or another. AdminFlowPage must wait for this
+    // before deciding to auto-create a new session - otherwise it races
+    // the restore fetch below and creates an orphan session on every
+    // reload of an admin tab that already had one in progress.
+    const [isRestoring, setIsRestoring] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const fetchByCode = useCallback(async (code: string) => {
@@ -18,13 +25,68 @@ export function useAdminSession() {
 
     useEffect(() => {
         const savedCode = localStorage.getItem(STORAGE_KEY);
-        if (!savedCode) return;
+        if (!savedCode) {
+            setIsRestoring(false);
+            return;
+        }
 
         setIsLoading(true);
         fetchByCode(savedCode)
             .catch(() => localStorage.removeItem(STORAGE_KEY))
-            .finally(() => setIsLoading(false));
+            .finally(() => {
+                setIsLoading(false);
+                setIsRestoring(false);
+            });
     }, [fetchByCode]);
+
+    // Keeps the admin screen live-synced: step changes, players joining
+    // (join_count in WaitingRoomPage), and the "X/2 has answered" counter.
+    useEffect(() => {
+        if (!session) return;
+
+        const channel = echo.channel(`game-session.${session.code}`);
+
+        channel.listen('.step.advanced', (payload: SessionInfo) => {
+            setSession(payload);
+        });
+
+        channel.listen('.player.joined', (payload: SessionInfo) => {
+            setSession(payload);
+        });
+
+        channel.listen(
+            '.answer.submitted',
+            (payload: { step_id: number; answered_count: number }) => {
+                setSession((current) =>
+                    current && current.current_step?.id === payload.step_id
+                        ? { ...current, answered_count: payload.answered_count }
+                        : current,
+                );
+            },
+        );
+
+        channel.listen('.boss.damaged', (payload: BossTapResult) => {
+            setSession((current) => {
+                if (!current) return current;
+
+                return {
+                    ...current,
+                    boss_phase: payload.boss_phase,
+                    boss_hp: payload.boss_hp,
+                    boss_hp_max: payload.boss_hp_max,
+                    teams: current.teams.map((t) =>
+                        t.id === payload.team_id
+                            ? { ...t, hp: payload.team_hp }
+                            : t,
+                    ),
+                };
+            });
+        });
+
+        return () => {
+            echo.leaveChannel(`game-session.${session.code}`);
+        };
+    }, [session?.code]);
 
     const createSession = useCallback(async (className?: string) => {
         setIsLoading(true);
@@ -72,5 +134,13 @@ export function useAdminSession() {
         return fetchByCode(session.code);
     }, [session, fetchByCode]);
 
-    return { session, isLoading, error, createSession, advanceSession, refresh };
+    return {
+        session,
+        isLoading,
+        isRestoring,
+        error,
+        createSession,
+        advanceSession,
+        refresh,
+    };
 }

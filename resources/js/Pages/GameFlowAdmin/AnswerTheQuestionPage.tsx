@@ -4,6 +4,7 @@ import HP from '@/assets/monitor/HP.svg?react';
 import Seconds from '@/assets/monitor/SECONDS.svg?react';
 import TriangleThing from '@/assets/monitor/trianglething.svg?react';
 import DialogueBox from '@/Components/monitor/dialogueBox';
+import type { SessionInfo } from '@/types/gameSession';
 import type { Step } from '@/types/step';
 
 import gsap from 'gsap';
@@ -11,9 +12,11 @@ import { useLayoutEffect, useRef } from 'react';
 
 type Props = {
     step: Step;
+    session: SessionInfo | null;
 };
 
-export default function AnswerTheQuestionPage({ step }: Props) {
+export default function AnswerTheQuestionPage({ step, session }: Props) {
+    const answeredCount = session?.answered_count ?? 0;
     const containerRef = useRef<HTMLDivElement>(null);
     const codieRef = useRef<HTMLDivElement>(null);
     const dialogueRef = useRef<HTMLDivElement>(null);
@@ -102,7 +105,9 @@ export default function AnswerTheQuestionPage({ step }: Props) {
 
                     <div className="absolute left-12 top-40 z-20 flex flex-col items-center leading-none">
                         <div className="flex items-center text-[56px] font-bold tracking-[-0.04em]">
-                            <span className="text-[#73F9D9]">0</span>
+                            <span className="text-[#73F9D9]">
+                                {answeredCount}
+                            </span>
 
                             <span className="mx-1 text-[#F0F2F5]">/</span>
 

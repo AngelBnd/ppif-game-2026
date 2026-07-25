@@ -14,17 +14,20 @@ export default function AdminFlowPage() {
     const { stepId } = useParams();
     const navigate = useNavigate();
     const { steps, isLoading } = useSteps();
-    const { session, createSession, advanceSession } = useAdminSession();
+    const { session, isRestoring, createSession, advanceSession } = useAdminSession();
 
     const hasRequestedSession = useRef(false);
 
     useEffect(() => {
-        if (session || hasRequestedSession.current) return;
+        // Wait for the saved-PIN restore check to finish first - otherwise
+        // this races it and creates an orphan session on every reload of
+        // an admin tab that already had one going.
+        if (session || isRestoring || hasRequestedSession.current) return;
         hasRequestedSession.current = true;
         createSession().catch(() => {
             hasRequestedSession.current = false;
         });
-    }, [session, createSession]);
+    }, [session, isRestoring, createSession]);
 
     const step = steps.find((item) => item.slug === stepId);
 
@@ -83,11 +86,15 @@ export default function AdminFlowPage() {
 
             {step.type === 'story' && <StorylinePage step={step} />}
 
-            {step.type === 'answer' && <AnswerTheQuestionPage step={step} />}
+            {step.type === 'answer' && (
+                <AnswerTheQuestionPage step={step} session={session} />
+            )}
 
             {step.type === 'activity' && <ActivityPage step={step} />}
 
-            {step.type === 'boss' && <BossFightPage step={step} />}
+            {step.type === 'boss' && (
+                <BossFightPage step={step} session={session} />
+            )}
         </div>
     );
 }

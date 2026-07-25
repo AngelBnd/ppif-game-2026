@@ -8,17 +8,96 @@ import PlaceholderBoss from '@/assets/monitor/placeholderboss.png';
 import Taptap from '@/assets/monitor/taptap.svg?react';
 import Thing from '@/assets/monitor/things.svg?react';
 import Streak from '@/assets/phone/STREAKBG.svg?react';
+import type { BossTapResult, SessionInfo } from '@/types/gameSession';
 import type { Step } from '@/types/step';
-import { useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import gsap from 'gsap';
 
+// Total HP across all 3 boss phases - must match the sum of
+// GameSession::BOSS_PHASE_MAX_HP on the backend. Used only to size the
+// "contribution" meter so it fills up gradually over the whole fight
+// instead of maxing out almost immediately.
+const TEAM_CONTRIBUTION_MAX = 450;
+
+// Batches taps client-side and flushes on an interval instead of firing an
+// HTTP request per tap - see BossFightController@tap for the server side.
+const TAP_FLUSH_INTERVAL_MS = 300;
+
 type Props = {
     step: Step;
+    session: SessionInfo | null;
+    team: { id: number; name: string } | null;
+    onTap: (taps: number) => Promise<BossTapResult>;
 };
 
-export default function BossFightPage({ step }: Props) {
+export default function BossFightPage({ step, session, team, onTap }: Props) {
     const containerRef = useRef<HTMLElement>(null);
+    const pendingTapsRef = useRef(0);
+    const [cutscene, setCutscene] = useState(false);
+    const [phaseBanner, setPhaseBanner] = useState<number | null>(null);
+    const prevPhaseRef = useRef<number | undefined>(undefined);
+    const phaseBannerRef = useRef<HTMLDivElement>(null);
+
+    const bossHp = session?.boss_hp ?? 0;
+    const bossHpMax = session?.boss_hp_max ?? 1;
+    const bossHpPercent = Math.min(
+        Math.max((bossHp / bossHpMax) * 100, 0),
+        100,
+    );
+    const myTeam = session?.teams.find((t) => t.id === team?.id);
+    const isFinished = cutscene || session?.boss_finished_at != null;
+
+    useEffect(() => {
+        if (session?.boss_finished_at) setCutscene(true);
+    }, [session?.boss_finished_at]);
+
+    // Flash "PHASE N" whenever the boss's phase changes - either from this
+    // device's own tap batch or from another player's/team's, via the
+    // shared session state (Echo-synced in usePlayerSession).
+    useEffect(() => {
+        const phase = session?.boss_phase;
+        if (phase === undefined) return;
+
+        if (prevPhaseRef.current !== undefined && phase !== prevPhaseRef.current) {
+            setPhaseBanner(phase);
+            const timeout = setTimeout(() => setPhaseBanner(null), 1500);
+            prevPhaseRef.current = phase;
+            return () => clearTimeout(timeout);
+        }
+
+        prevPhaseRef.current = phase;
+    }, [session?.boss_phase]);
+
+    useEffect(() => {
+        if (phaseBanner === null || !phaseBannerRef.current) return;
+
+        gsap.fromTo(
+            phaseBannerRef.current,
+            { scale: 0.5, autoAlpha: 0 },
+            { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(2)' },
+        );
+    }, [phaseBanner]);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (pendingTapsRef.current === 0 || isFinished) return;
+
+            const taps = Math.min(pendingTapsRef.current, 50);
+            // Only drop what's actually being sent - a burst over 50
+            // carries the remainder into the next flush instead of
+            // silently losing taps during fast tapping.
+            pendingTapsRef.current -= taps;
+
+            onTap(taps)
+                .then((result) => {
+                    if (result.cutscene) setCutscene(true);
+                })
+                .catch(() => {});
+        }, TAP_FLUSH_INTERVAL_MS);
+
+        return () => clearInterval(interval);
+    }, [onTap, isFinished]);
     const codieRef = useRef<HTMLDivElement>(null);
     const streakRef = useRef<HTMLDivElement>(null);
     const thingRef = useRef<HTMLDivElement>(null);
@@ -162,6 +241,10 @@ export default function BossFightPage({ step }: Props) {
     }, []);
 
     const handleFireTap = () => {
+        if (isFinished) return;
+
+        pendingTapsRef.current += 1;
+
         gsap.killTweensOf(fireRef.current);
         gsap.killTweensOf(fireRef.current);
 
@@ -222,7 +305,7 @@ export default function BossFightPage({ step }: Props) {
                             <div
                                 className="h-full bg-[#BF1E2E] transition-[width] duration-500 ease-out"
                                 style={{
-                                    width: `${50}%`,
+                                    width: `${bossHpPercent}%`,
                                 }}
                             />
                         </div>
@@ -232,9 +315,32 @@ export default function BossFightPage({ step }: Props) {
                         className="-mt-4 scale-75 self-end"
                         ref={teamHPContainerRef}
                     >
-                        <TeamHP teamName="apalah" currentHP={20} maxHP={100} />
+                        <TeamHP
+                            teamName={team?.name ?? ''}
+                            currentHP={myTeam?.hp ?? 0}
+                            maxHP={TEAM_CONTRIBUTION_MAX}
+                        />
                     </div>
                 </div>
+
+                {phaseBanner !== null && !isFinished && (
+                    <div
+                        ref={phaseBannerRef}
+                        className="pointer-events-none absolute inset-x-0 top-[30%] z-[55] flex justify-center"
+                    >
+                        <p className="rounded bg-black/70 px-6 py-2 font-arsenal text-3xl font-bold text-[#FFFE25]">
+                            PHASE {phaseBanner}
+                        </p>
+                    </div>
+                )}
+
+                {isFinished && (
+                    <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/85 px-8 text-center">
+                        <p className="font-arsenal text-2xl font-bold text-white">
+                            The boss was too strong...
+                        </p>
+                    </div>
+                )}
 
                 <div className="absolute left-1/2 top-[40%] z-0 w-[13rem] -translate-x-1/2 -translate-y-1/2">
                     <img

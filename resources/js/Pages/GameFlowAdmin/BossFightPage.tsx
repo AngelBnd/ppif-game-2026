@@ -11,32 +11,56 @@ import Bullets from '@/assets/monitor/bullets.svg?react';
 import PlaceholderBoss from '@/assets/monitor/placeholderboss.png';
 import Taptap from '@/assets/monitor/taptap.svg?react';
 import Thing from '@/assets/monitor/things.svg?react';
+import type { SessionInfo } from '@/types/gameSession';
 import type { Step } from '@/types/step';
 
 import gsap from 'gsap';
-import { useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+
+// Must match TEAM_CONTRIBUTION_MAX in the player BossFightPage (and the
+// sum of GameSession::BOSS_PHASE_MAX_HP on the backend).
+const TEAM_CONTRIBUTION_MAX = 450;
 
 type Props = {
     step: Step;
+    session: SessionInfo | null;
 };
 
-const teams = [
-    {
-        id: 1,
-        name: 'NAMATIM',
-        currentHP: 75,
-        maxHP: 100,
-    },
-    {
-        id: 2,
-        name: 'NAMATIM2',
-        currentHP: 45,
-        maxHP: 100,
-    },
-];
-
-export default function BossFightPage({ step }: Props) {
+export default function BossFightPage({ step, session }: Props) {
     const containerRef = useRef<HTMLElement>(null);
+    const bossHp = session?.boss_hp ?? 0;
+    const bossHpMax = session?.boss_hp_max ?? 1;
+    const isFinished = session?.boss_finished_at != null;
+
+    const [phaseBanner, setPhaseBanner] = useState<number | null>(null);
+    const prevPhaseRef = useRef<number | undefined>(undefined);
+    const phaseBannerRef = useRef<HTMLDivElement>(null);
+
+    // Flash "PHASE N" whenever the boss's phase changes - driven by the
+    // Echo-synced session state, same as the player screen.
+    useEffect(() => {
+        const phase = session?.boss_phase;
+        if (phase === undefined) return;
+
+        if (prevPhaseRef.current !== undefined && phase !== prevPhaseRef.current) {
+            setPhaseBanner(phase);
+            const timeout = setTimeout(() => setPhaseBanner(null), 1500);
+            prevPhaseRef.current = phase;
+            return () => clearTimeout(timeout);
+        }
+
+        prevPhaseRef.current = phase;
+    }, [session?.boss_phase]);
+
+    useEffect(() => {
+        if (phaseBanner === null || !phaseBannerRef.current) return;
+
+        gsap.fromTo(
+            phaseBannerRef.current,
+            { scale: 0.5, autoAlpha: 0 },
+            { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(2)' },
+        );
+    }, [phaseBanner]);
 
     const codieRef = useRef<HTMLDivElement>(null);
     const thingRef = useRef<HTMLDivElement>(null);
@@ -325,23 +349,42 @@ export default function BossFightPage({ step }: Props) {
                 ref={bossHealthRef}
                 className="absolute left-4 top-24 origin-center"
             >
-                <BossHealthBar currentHP={750} maxHP={1000} />
+                <BossHealthBar currentHP={bossHp} maxHP={bossHpMax} />
             </div>
 
             <div
                 ref={teamHPContainerRef}
                 className="absolute bottom-16 right-4 flex gap-4"
             >
-                {teams.map((team) => (
+                {session?.teams.map((team) => (
                     <div key={team.id} data-team-hp>
                         <TeamHP
                             teamName={team.name}
-                            currentHP={team.currentHP}
-                            maxHP={team.maxHP}
+                            currentHP={team.hp}
+                            maxHP={TEAM_CONTRIBUTION_MAX}
                         />
                     </div>
                 ))}
             </div>
+
+            {phaseBanner !== null && !isFinished && (
+                <div
+                    ref={phaseBannerRef}
+                    className="pointer-events-none absolute inset-x-0 top-[35%] z-[65] flex justify-center"
+                >
+                    <p className="rounded bg-black/70 px-10 py-3 font-arsenal text-6xl font-bold text-[#FFFE25]">
+                        PHASE {phaseBanner}
+                    </p>
+                </div>
+            )}
+
+            {isFinished && (
+                <div className="absolute inset-0 z-[70] flex items-center justify-center bg-black/85 px-8 text-center">
+                    <p className="font-arsenal text-4xl font-bold text-white">
+                        The boss was too strong...
+                    </p>
+                </div>
+            )}
 
             <div
                 ref={questBoxRef}

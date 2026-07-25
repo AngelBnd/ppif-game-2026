@@ -6,12 +6,14 @@ import InputJawaban from '@/assets/phone/InputJawaban.svg?react';
 import OKbutton from '@/assets/phone/OK.svg?react';
 import Streak from '@/assets/phone/STREAKBG.svg?react';
 import Soalbrp from '@/assets/phone/SoalBerapa.svg?react';
+import type { SessionInfo } from '@/types/gameSession';
 import type { Step } from '@/types/step';
 import gsap from 'gsap';
 import { useLayoutEffect, useRef, useState } from 'react';
 type Props = {
     step: Step;
     question?: string;
+    session: SessionInfo | null;
     onSubmit: (
         answerText: string,
     ) => Promise<{ is_correct: boolean; response_time_ms: number }>;
@@ -20,8 +22,10 @@ type Props = {
 export default function AnswerTheQuestionPage({
     step,
     question,
+    session,
     onSubmit,
 }: Props) {
+    const answeredCount = session?.answered_count ?? 0;
     const containerRef = useRef<HTMLElement>(null);
     const [answerText, setAnswerText] = useState('');
     const [status, setStatus] = useState<
@@ -161,7 +165,9 @@ export default function AnswerTheQuestionPage({
 
                             <div className="absolute left-7 top-24 z-20 flex flex-col items-center leading-none">
                                 <div className="flex items-center text-[36px] font-bold tracking-[-0.04em]">
-                                    <span className="text-[#73F9D9]">0</span>
+                                    <span className="text-[#73F9D9]">
+                                        {answeredCount}
+                                    </span>
 
                                     <span className="mx-1 text-[#F0F2F5]">
                                         /
