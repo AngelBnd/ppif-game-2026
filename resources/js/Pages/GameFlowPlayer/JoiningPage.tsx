@@ -26,8 +26,9 @@ function CodeInput({ length = 6, onComplete, inputBgRefs }: CodeInputProps) {
         e: React.ChangeEvent<HTMLInputElement>,
         index: number,
     ) => {
-        const inputValue = e.target.value;
-        const char = inputValue.slice(-1).toUpperCase();
+        const char = e.target.value.slice(-1);
+
+        if (char && !/[0-9]/.test(char)) return;
 
         const newValues = [...values];
         newValues[index] = char;
@@ -58,8 +59,8 @@ function CodeInput({ length = 6, onComplete, inputBgRefs }: CodeInputProps) {
 
         const pasted = e.clipboardData
             .getData('text')
+            .replace(/[^0-9]/g, '')
             .slice(0, length)
-            .toUpperCase()
             .split('');
 
         const newValues = Array(length).fill('');
@@ -98,6 +99,9 @@ function CodeInput({ length = 6, onComplete, inputBgRefs }: CodeInputProps) {
                         }}
                         value={value}
                         maxLength={1}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        autoComplete="off"
                         onChange={(e) => handleChange(e, index)}
                         onKeyDown={(e) => handleKeyDown(e, index)}
                         onPaste={handlePaste}
