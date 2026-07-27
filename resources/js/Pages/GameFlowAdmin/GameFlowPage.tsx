@@ -16,8 +16,13 @@ export default function AdminFlowPage() {
     const { stepId } = useParams();
     const navigate = useNavigate();
     const { steps, isLoading } = useSteps();
-    const { session, isRestoring, isLoading: isSessionLoading, createSession, advanceSession } =
-        useAdminSession();
+    const {
+        session,
+        isRestoring,
+        isLoading: isSessionLoading,
+        createSession,
+        advanceSession,
+    } = useAdminSession();
 
     const [groupInput, setGroupInput] = useState('');
 
@@ -92,7 +97,9 @@ export default function AdminFlowPage() {
             })
             .catch(() => {
                 // Fall back to local step order if the API call fails.
-                const next = steps.find((item) => item.order === step.order + 1);
+                const next = steps.find(
+                    (item) => item.order === step.order + 1,
+                );
                 if (next) navigate(`/admin/${next.slug}`);
             });
     };
@@ -109,7 +116,11 @@ export default function AdminFlowPage() {
             )}
 
             {step.type === 'waiting' && (
-                <WaitingRoompage step={step} session={session} goNext={goNext} />
+                <WaitingRoompage
+                    step={step}
+                    session={session}
+                    goNext={goNext}
+                />
             )}
 
             {step.type === 'story' && <StorylinePage step={step} />}
