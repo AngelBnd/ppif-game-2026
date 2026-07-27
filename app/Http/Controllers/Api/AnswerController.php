@@ -6,6 +6,7 @@ use App\Events\AnswerSubmitted;
 use App\Http\Controllers\Controller;
 use App\Models\Answer;
 use App\Models\GameSession;
+use App\Models\LeaderboardEntry;
 use App\Models\Player;
 use App\Models\StepProgress;
 use Illuminate\Http\Request;
@@ -57,6 +58,26 @@ class AnswerController extends Controller
         if ($isCorrect) {
             $player->team->increment('score');
         }
+
+        $leaderboard = LeaderboardEntry::firstOrCreate(
+            ['team_id' => $player->team_id],
+            [
+                'game_session_id' => $session->id,
+                'class_name' => $session->class_name,
+                'team_name' => $player->team->name,
+            ],
+        );
+
+        $leaderboard->total_answers++;
+        $leaderboard->total_response_time_ms += $answer->response_time_ms;
+        $leaderboard->last_answered_at = now();
+
+        if ($isCorrect) {
+            $leaderboard->correct_answers++;
+            $leaderboard->score++;
+        }
+
+        $leaderboard->save();
 
         event(new AnswerSubmitted($session, $answer));
 
