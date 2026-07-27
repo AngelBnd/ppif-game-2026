@@ -20,6 +20,8 @@ class GameSession extends Model
 
     public const BOSS_PHASE3_CUTSCENE_THRESHOLD = 15;
 
+    public const MAX_PLAYERS_PER_TEAM = 3;
+
     protected $fillable = [
         'code',
         'class_name',

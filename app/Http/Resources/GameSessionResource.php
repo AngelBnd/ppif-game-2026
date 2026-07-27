@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\GameSession;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -30,6 +31,7 @@ class GameSessionResource extends JsonResource
             'boss_hp' => $this->boss_hp,
             'boss_hp_max' => $this->bossPhaseMaxHp(),
             'boss_finished_at' => $this->boss_finished_at,
+            'max_players_per_team' => GameSession::MAX_PLAYERS_PER_TEAM,
             'teams' => $this->whenLoaded('teams', function () {
                 return $this->teams->map(fn ($team) => [
                     'id' => $team->id,
@@ -37,10 +39,7 @@ class GameSessionResource extends JsonResource
                     'score' => $team->score,
                     'hp' => $team->hp,
                     'players' => $team->relationLoaded('players')
-                        ? $team->players->map(fn ($player) => [
-                            'id' => $player->id,
-                            'nickname' => $player->nickname,
-                        ])
+                        ? $team->players->map(fn ($player) => ['id' => $player->id])
                         : [],
                 ]);
             }),

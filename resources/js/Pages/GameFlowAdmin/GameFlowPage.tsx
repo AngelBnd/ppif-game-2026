@@ -2,7 +2,7 @@ import Button from '@/Components/global/Button';
 import NextButton from '@/assets/icons/NextButtonSVG.svg?react';
 import { useAdminSession } from '@/hooks/useAdminSession';
 import { useSteps } from '@/hooks/useSteps';
-import { useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ActivityPage from './ActivityPage';
 import AnswerTheQuestionPage from './AnswerTheQuestionPage';
@@ -10,31 +10,59 @@ import BossFightPage from './BossFightPage';
 import StorylinePage from './StorylinePage';
 import WaitingRoompage from './WaitingRoomPage';
 
+const GROUP_PAIR_PATTERN = /^\s*\d+\s*\/\s*\d+\s*$/;
+
 export default function AdminFlowPage() {
     const { stepId } = useParams();
     const navigate = useNavigate();
     const { steps, isLoading } = useSteps();
-    const { session, isRestoring, createSession, advanceSession } = useAdminSession();
+    const { session, isRestoring, isLoading: isSessionLoading, createSession, advanceSession } =
+        useAdminSession();
 
-    const hasRequestedSession = useRef(false);
-
-    useEffect(() => {
-        // Wait for the saved-PIN restore check to finish first - otherwise
-        // this races it and creates an orphan session on every reload of
-        // an admin tab that already had one going.
-        if (session || isRestoring || hasRequestedSession.current) return;
-        hasRequestedSession.current = true;
-        createSession().catch(() => {
-            hasRequestedSession.current = false;
-        });
-    }, [session, isRestoring, createSession]);
+    const [groupInput, setGroupInput] = useState('');
 
     const step = steps.find((item) => item.slug === stepId);
 
-    if (isLoading) {
+    if (isLoading || isRestoring) {
         return (
             <main className="flex min-h-screen items-center justify-center bg-black text-white">
                 <p>Loading...</p>
+            </main>
+        );
+    }
+
+    if (!session) {
+        const isValid = GROUP_PAIR_PATTERN.test(groupInput);
+
+        return (
+            <main className="flex min-h-screen items-center justify-center bg-black text-white">
+                <form
+                    className="flex w-full max-w-xs flex-col gap-4 text-center"
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        if (isValid) createSession(groupInput.trim());
+                    }}
+                >
+                    <label htmlFor="group-pair" className="text-lg font-bold">
+                        Nomor Kelompok (contoh: 1/2)
+                    </label>
+                    <input
+                        id="group-pair"
+                        type="text"
+                        value={groupInput}
+                        onChange={(e) => setGroupInput(e.target.value)}
+                        placeholder="1/2"
+                        className="rounded-xl px-4 py-3 text-center text-black"
+                        disabled={isSessionLoading}
+                    />
+                    <button
+                        type="submit"
+                        disabled={!isValid || isSessionLoading}
+                        className="rounded-xl bg-white px-6 py-3 text-black disabled:opacity-40"
+                    >
+                        {isSessionLoading ? 'Membuat sesi...' : 'Mulai Sesi'}
+                    </button>
+                </form>
             </main>
         );
     }

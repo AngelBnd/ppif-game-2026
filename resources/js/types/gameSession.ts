@@ -5,7 +5,7 @@ export type TeamInfo = {
     name: string;
     score: number;
     hp: number;
-    players: { id: number; nickname: string }[];
+    players: { id: number }[];
 };
 
 export type SessionInfo = {
@@ -17,6 +17,7 @@ export type SessionInfo = {
     started_at: string | null;
     finished_at: string | null;
     teams: TeamInfo[];
+    max_players_per_team: number;
     answered_count: number;
     boss_phase: number;
     boss_hp: number;

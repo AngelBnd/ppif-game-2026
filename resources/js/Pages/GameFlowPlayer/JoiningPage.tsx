@@ -1,14 +1,15 @@
 import InputBorderBottom from '@/assets/phone/InputBorderBottomSVG.svg?react';
 import InputYourCode from '@/assets/phone/inputurcode.svg?react';
-import Join from '@/assets/phone/JOIN.svg?react';
 import StreakBG from '@/assets/phone/STREAKBG.svg?react';
 import gsap from 'gsap';
 import { useRef, useState } from 'react';
 import type { Step } from '@/types/step';
+import type { SessionInfo } from '@/types/gameSession';
 
 type Props = {
     step: Step;
-    onJoin: (code: string, nickname: string) => Promise<unknown>;
+    onPeek: (code: string) => Promise<SessionInfo>;
+    onJoin: (code: string, teamId: number) => Promise<unknown>;
 };
 
 type CodeInputProps = {
@@ -110,9 +111,12 @@ function CodeInput({ length = 6, onComplete, inputBgRefs }: CodeInputProps) {
     );
 }
 
-export default function JoinRoomPage({ onJoin }: Props) {
+export default function JoinRoomPage({ onPeek, onJoin }: Props) {
     const [uniqueCode, setUniqueCode] = useState('');
-    const [nickname, setNickname] = useState('');
+    const [teams, setTeams] = useState<SessionInfo['teams'] | null>(null);
+    const [maxPlayersPerTeam, setMaxPlayersPerTeam] = useState(3);
+    const [isChecking, setIsChecking] = useState(false);
+    const [isJoining, setIsJoining] = useState(false);
     const [error, setError] = useState('');
     const [joined, setJoined] = useState(false);
 
@@ -138,22 +142,29 @@ export default function JoinRoomPage({ onJoin }: Props) {
         );
     };
 
-    const handleJoin = async () => {
-        if (uniqueCode.length < 6) {
-            setError('Enter the full 6-digit code.');
-            shakeForm();
-            return;
-        }
+    const handleCodeComplete = async (value: string) => {
+        setUniqueCode(value);
+        setError('');
+        setIsChecking(true);
 
-        if (!nickname.trim()) {
-            setError('Enter a nickname.');
+        try {
+            const info = await onPeek(value);
+            setTeams(info.teams);
+            setMaxPlayersPerTeam(info.max_players_per_team);
+        } catch {
+            setError('Invalid unique code.');
             shakeForm();
-            return;
+        } finally {
+            setIsChecking(false);
         }
+    };
+
+    const handleChooseTeam = async (teamId: number) => {
+        setIsJoining(true);
 
         try {
             setError('');
-            await onJoin(uniqueCode, nickname.trim());
+            await onJoin(uniqueCode, teamId);
 
             const inputBgs = inputBgRefs.current.filter(Boolean);
 
@@ -175,9 +186,11 @@ export default function JoinRoomPage({ onJoin }: Props) {
                     },
                 },
             );
-        } catch {
-            setError('Invalid unique code.');
+        } catch (err) {
+            setError((err as Error).message || 'Failed to join.');
             shakeForm();
+        } finally {
+            setIsJoining(false);
         }
     };
 
@@ -201,25 +214,13 @@ export default function JoinRoomPage({ onJoin }: Props) {
                     <InputYourCode className="w-[20em] rotate-[-8deg]" />
                 </div>
 
-                <input
-                    type="text"
-                    value={nickname}
-                    onChange={(e) => setNickname(e.target.value)}
-                    placeholder="Nickname"
-                    maxLength={30}
-                    className="mt-4 w-64 rounded-lg border border-white/20 bg-black/40 px-4 py-2 text-center text-lg text-white outline-none placeholder:text-white/40 focus:border-white/50"
-                />
-
                 <div className="relative mt-10 h-[2rem] w-[29rem]">
                     <StreakBG className="absolute left-1/2 top-1/2 w-[40rem] -translate-x-1/2 -translate-y-1/2 object-cover" />
                     <div className="absolute -top-6 left-1/2 -translate-x-1/2 -rotate-12">
                         <CodeInput
                             length={6}
                             inputBgRefs={inputBgRefs}
-                            onComplete={(value) => {
-                                setUniqueCode(value);
-                                setError('');
-                            }}
+                            onComplete={handleCodeComplete}
                         />
                     </div>
                 </div>
@@ -230,12 +231,33 @@ export default function JoinRoomPage({ onJoin }: Props) {
                     </p>
                 )}
 
-                <button
-                    onClick={handleJoin}
-                    className="mt-16 transition-transform hover:scale-105 active:scale-95"
-                >
-                    <Join className="w-[24rem]" />
-                </button>
+                {isChecking && (
+                    <p className="mt-6 text-sm text-white/60">Mengecek kode...</p>
+                )}
+
+                {teams && (
+                    <div className="mt-10 flex w-64 flex-col gap-3">
+                        {teams.map((team) => {
+                            const isFull = team.players.length >= maxPlayersPerTeam;
+
+                            return (
+                                <button
+                                    key={team.id}
+                                    onClick={() => handleChooseTeam(team.id)}
+                                    disabled={isFull || isJoining}
+                                    className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-black transition-transform hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                    <span className="font-semibold">{team.name}</span>
+                                    <span className="text-sm text-black/60">
+                                        {isFull
+                                            ? 'Penuh'
+                                            : `${team.players.length}/${maxPlayersPerTeam}`}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
         </main>
     );

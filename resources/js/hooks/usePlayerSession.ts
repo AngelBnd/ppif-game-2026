@@ -44,6 +44,16 @@ export function usePlayerSession() {
         return body.data as SessionInfo;
     }, []);
 
+    // Looks up a session by code without committing to it - used by the
+    // join screen to show the two teams (and their current headcount)
+    // before the player has actually picked one and joined.
+    const peekSession = useCallback(async (code: string) => {
+        const res = await fetch(`/api/game-sessions/${code}`);
+        if (!res.ok) throw new Error('Invalid unique code.');
+        const body = await res.json();
+        return body.data as SessionInfo;
+    }, []);
+
     useEffect(() => {
         const savedCode = localStorage.getItem(CODE_KEY);
         if (!savedCode) return;
@@ -91,7 +101,7 @@ export function usePlayerSession() {
         };
     }, [session?.code, applyBossTapResult]);
 
-    const joinSession = useCallback(async (code: string, nickname: string) => {
+    const joinSession = useCallback(async (code: string, teamId: number) => {
         setIsLoading(true);
         setError(null);
 
@@ -99,12 +109,13 @@ export function usePlayerSession() {
             const res = await fetch(`/api/game-sessions/${code}/join`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nickname }),
+                body: JSON.stringify({ team_id: teamId }),
             });
 
-            if (!res.ok) throw new Error('Failed to join session');
-
             const body = await res.json();
+
+            if (!res.ok) throw new Error(body.message ?? 'Failed to join session');
+
             localStorage.setItem(CODE_KEY, code);
             localStorage.setItem(TOKEN_KEY, body.device_token);
             localStorage.setItem(TEAM_KEY, JSON.stringify(body.team));
@@ -173,6 +184,7 @@ export function usePlayerSession() {
         team,
         isLoading,
         error,
+        peekSession,
         joinSession,
         submitAnswer,
         submitBossTap,

@@ -24,7 +24,15 @@ class GameSessionController extends Controller
 
         $firstStep = Step::orderBy('order')->firstOrFail();
 
-        $session = DB::transaction(function () use ($validated, $firstStep) {
+        // PIC inputs the two group numbers as "1/2" - use them as the team
+        // names so the leaderboard can tell groups apart. Falls back to
+        // generic names if the format doesn't match (e.g. left blank).
+        $groupNumbers = null;
+        if (! empty($validated['class_name']) && preg_match('/^\s*(\d+)\s*\/\s*(\d+)\s*$/', $validated['class_name'], $matches)) {
+            $groupNumbers = [$matches[1], $matches[2]];
+        }
+
+        $session = DB::transaction(function () use ($validated, $firstStep, $groupNumbers) {
             $session = GameSession::create([
                 'code' => $this->generateUniqueCode(),
                 'class_name' => $validated['class_name'] ?? null,
@@ -33,8 +41,8 @@ class GameSessionController extends Controller
             ]);
 
             $session->teams()->createMany([
-                ['name' => 'Kelompok A'],
-                ['name' => 'Kelompok B'],
+                ['name' => $groupNumbers ? "Kelompok {$groupNumbers[0]}" : 'Kelompok A'],
+                ['name' => $groupNumbers ? "Kelompok {$groupNumbers[1]}" : 'Kelompok B'],
             ]);
 
             StepProgress::create([
@@ -61,26 +69,39 @@ class GameSessionController extends Controller
     public function join(Request $request, string $code)
     {
         $validated = $request->validate([
-            'nickname' => ['required', 'string', 'max:255'],
+            'team_id' => ['required', 'integer'],
         ]);
 
-        $session = GameSession::where('code', $code)->with('teams.players')->firstOrFail();
+        $session = GameSession::where('code', $code)->firstOrFail();
 
-        // Auto-balance: new player goes to whichever team currently has fewer players.
-        $team = $session->teams->sortBy(fn ($t) => $t->players->count())->first();
+        [$player, $team] = DB::transaction(function () use ($session, $validated) {
+            // Lock the team row so two devices tapping the same team at the
+            // same time can't both slip into the last slot.
+            $team = Team::where('id', $validated['team_id'])
+                ->where('game_session_id', $session->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $player = $team->players()->create([
-            'nickname' => $validated['nickname'],
-            'device_token' => (string) Str::uuid(),
-            'joined_at' => now(),
-        ]);
+            abort_if(
+                $team->players()->count() >= GameSession::MAX_PLAYERS_PER_TEAM,
+                409,
+                'Kelompok ini sudah penuh.',
+            );
+
+            $player = $team->players()->create([
+                'device_token' => (string) Str::uuid(),
+                'joined_at' => now(),
+            ]);
+
+            return [$player, $team];
+        });
 
         $session = $session->fresh(['teams.players', 'currentStep']);
         event(new PlayerJoined($session));
 
         return response()->json([
             'device_token' => $player->device_token,
-            'player' => ['id' => $player->id, 'nickname' => $player->nickname],
+            'player' => ['id' => $player->id],
             'team' => ['id' => $team->id, 'name' => $team->name],
             'game_session' => new GameSessionResource($session),
         ], 201);

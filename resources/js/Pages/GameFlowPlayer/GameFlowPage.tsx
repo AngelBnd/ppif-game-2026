@@ -3,8 +3,6 @@ import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useSteps } from '@/hooks/useSteps';
 import { useEffect } from 'react';
 
-import Button from '@/Components/global/Button';
-import NextButton from '@/assets/icons/NextButtonSVG.svg?react';
 import ActivityPage from './ActivityPage';
 import AnswerTheQuestionPage from './AnswerTheQuestionPage';
 import BossFightPage from './BossFightPage';
@@ -15,7 +13,7 @@ export default function PlayerFlowPage() {
     const { stepId } = useParams();
     const navigate = useNavigate();
     const { steps, isLoading } = useSteps();
-    const { session, team, joinSession, submitAnswer, submitBossTap } =
+    const { session, team, peekSession, joinSession, submitAnswer, submitBossTap } =
         usePlayerSession();
 
     // Follows whatever step the admin advances to on the server.
@@ -54,35 +52,14 @@ export default function PlayerFlowPage() {
         );
     }
 
-    const goNext = () => {
-        const next = steps.find((item) => item.order === step.order + 1);
-
-        if (next) {
-            navigate(`/player/${next.slug}`);
-        }
-    };
-
     return (
         <div className="h-dvh w-screen overflow-hidden bg-black">
-            <div className="absolute right-4 top-4 z-50">
-                <Button
-                    Icon={NextButton}
-                    iconClassName="w-32"
-                    onClick={goNext}
-                />
-
-                <div className="mt-2 w-40 text-xs text-white">
-                    player nanti ga ada button nextnya, nextnya itu dikendaliin
-                    sama admin.
-                    <br />
-                    buat liat admin /admin
-                    <br />
-                    buat liat player /player
-                </div>
-            </div>
-
             {step.type === 'waiting' && (
-                <JoinRoomPage step={step} onJoin={joinSession} />
+                <JoinRoomPage
+                    step={step}
+                    onPeek={peekSession}
+                    onJoin={joinSession}
+                />
             )}
 
             {step.type === 'story' && <StorylinePage step={step} />}
