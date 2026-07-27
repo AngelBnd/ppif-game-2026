@@ -10,16 +10,16 @@ export default function AppRouter() {
         <BrowserRouter>
          <AppLayout>
             <Routes>
-                <Route path="/" element={<Navigate to="/player/join-room" replace />} />
+                <Route path="/" element={<Navigate to="/player/lobby" replace />} />
 
                 <Route
                     path="/player"
-                    element={<Navigate to="/player/join-room" replace />}
+                    element={<Navigate to="/player/lobby" replace />}
                 />
 
                 <Route
                     path="/admin"
-                    element={<Navigate to="/admin/waiting-room" replace />}
+                    element={<Navigate to="/admin/lobby" replace />}
                 />
 
                 <Route path="/player/:stepId" element={<PlayerFlowPage />} />
