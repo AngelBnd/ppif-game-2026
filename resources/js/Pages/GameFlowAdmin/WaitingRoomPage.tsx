@@ -10,8 +10,15 @@ type Props = {
 
 export default function WaitingRoompage({ session, goNext }: Props) {
     const pin = session?.code ?? '';
-    const joinedCount = Math.min(
-        session?.teams.reduce((sum, team) => sum + team.players.length, 0) ?? 0,
+    const maxPlayers = session?.max_players_per_team ?? 3;
+    const leftTeam = session?.teams[0];
+    const rightTeam = session?.teams[1];
+    const leftCount = leftTeam?.players.length ?? 0;
+    const rightCount = rightTeam?.players.length ?? 0;
+    // Flag art only has 3 states (0/1/2) - reuse it as "how many sides have
+    // at least one player in" rather than a literal head count.
+    const flagIndex = Math.min(
+        (leftCount >= 1 ? 1 : 0) + (rightCount >= 1 ? 1 : 0),
         2,
     );
     const [pressState, setPressState] = useState<'idle' | 'hover' | 'press'>(
@@ -110,7 +117,7 @@ export default function WaitingRoompage({ session, goNext }: Props) {
 
                 {/* 3. flag*/}
                 <img
-                    src={`/starting-page/${joinedCount}-2hasjoined.svg`}
+                    src={`/starting-page/${flagIndex}-2hasjoined.svg`}
                     alt=""
                     className="absolute left-[30%] top-[-2.1%] z-[4] h-auto w-[75%]"
                 />
@@ -119,7 +126,7 @@ export default function WaitingRoompage({ session, goNext }: Props) {
                 <div className="absolute inset-0 z-[5] bg-gradient-to-r from-black/60 via-black/10 to-transparent" />
 
                 {/*  5. BOARD STATUS LEFT */}
-                {joinedCount >= 1 ? (
+                {leftCount >= 1 ? (
                     /* SIGNED: bungkus dalem relative biar nama-tim nempel ke board */
                     <div className="absolute right-[16%] top-[3%] z-[9] w-[20%]">
                         <div className="relative w-full animate-persona-in">
@@ -128,21 +135,32 @@ export default function WaitingRoompage({ session, goNext }: Props) {
                                 alt=""
                                 className="block h-auto w-full"
                             />
-                            {/* nama-tim wrapper: bottom/left/w relatif ke board di atas */}
-                            <div className="absolute bottom-[10%] left-[26%] w-[53%]">
-                                <img
-                                    src="/starting-page/nama-tim.svg"
-                                    alt=""
-                                    className="h-auto w-full"
-                                />
-                                <span className="absolute left-[10%] top-[15%] w-[9vw] -rotate-[9deg] font-arsenal text-[1.8vw] font-bold leading-none text-white">
-                                    NAMA
-                                    <br />
-                                    TIM 1
-                                </span>
-                                <span className="absolute left-[20%] top-[75%] w-[9vw] -rotate-[5deg] font-arsenal text-[1vw] font-bold leading-[1vw] text-white">
-                                    has joined
-                                </span>
+
+                            <p className="absolute left-1/2 top-[9%] z-20 -translate-x-1/2 whitespace-nowrap rounded bg-black/70 px-2 py-0.5 font-arsenal text-[1.4vw] font-bold text-white">
+                                {leftCount}/{maxPlayers}
+                            </p>
+
+                            {/* stack of banner slots - one per player, fills in as they join */}
+                            <div className="absolute bottom-[6%] left-[24%] flex w-[56%] flex-col gap-[0.4vw]">
+                                {Array.from({ length: maxPlayers }, (_, i) => (
+                                    <div
+                                        key={i}
+                                        className={`relative w-full transition-opacity duration-300 ${
+                                            i < leftCount
+                                                ? 'opacity-100'
+                                                : 'opacity-20'
+                                        }`}
+                                    >
+                                        <img
+                                            src="/starting-page/nama-tim.svg"
+                                            alt=""
+                                            className="h-auto w-full"
+                                        />
+                                        <span className="absolute left-[12%] top-[20%] w-[9vw] -rotate-[9deg] truncate font-arsenal text-[0.9vw] font-bold leading-none text-white">
+                                            {leftTeam?.name ?? ''}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -155,7 +173,7 @@ export default function WaitingRoompage({ session, goNext }: Props) {
                 )}
 
                 {/*  6. BOARD STATUS RIGHT  */}
-                {joinedCount >= 2 ? (
+                {rightCount >= 1 ? (
                     /* SIGNED: bungkus dalem relative biar nama-tim-kanan nempel ke board */
                     <div className="absolute right-[2%] top-[8%] z-[8] w-[25%]">
                         <div className="relative w-full animate-persona-in">
@@ -164,21 +182,32 @@ export default function WaitingRoompage({ session, goNext }: Props) {
                                 alt=""
                                 className="block h-auto w-full"
                             />
-                            {/* nama-tim-kanan wrapper: bottom/left/w relatif ke board di atas */}
-                            <div className="absolute bottom-[15%] left-[28%] w-[42%]">
-                                <img
-                                    src="/starting-page/nama-tim-kanan.svg"
-                                    alt=""
-                                    className="h-auto w-full"
-                                />
-                                <span className="absolute left-[10%] top-[10%] w-[9vw] rotate-[4deg] font-arsenal text-[1.8vw] font-bold leading-none text-white">
-                                    NAMA
-                                    <br />
-                                    TIM 1
-                                </span>
-                                <span className="absolute left-[20%] top-[75%] w-[9vw] rotate-[4deg] font-arsenal text-[1vw] font-bold leading-[1vw] text-white">
-                                    has joined
-                                </span>
+
+                            <p className="absolute left-1/2 top-[2%] z-20 -translate-x-1/2 whitespace-nowrap rounded bg-black/70 px-2 py-0.5 font-arsenal text-[1.4vw] font-bold text-white">
+                                {rightCount}/{maxPlayers}
+                            </p>
+
+                            {/* stack of banner slots - one per player, fills in as they join */}
+                            <div className="absolute bottom-[10%] left-[26%] flex w-[46%] flex-col gap-[0.4vw]">
+                                {Array.from({ length: maxPlayers }, (_, i) => (
+                                    <div
+                                        key={i}
+                                        className={`relative w-full transition-opacity duration-300 ${
+                                            i < rightCount
+                                                ? 'opacity-100'
+                                                : 'opacity-20'
+                                        }`}
+                                    >
+                                        <img
+                                            src="/starting-page/nama-tim-kanan.svg"
+                                            alt=""
+                                            className="h-auto w-full"
+                                        />
+                                        <span className="absolute left-[12%] top-[15%] w-[9vw] rotate-[4deg] truncate font-arsenal text-[0.9vw] font-bold leading-none text-white">
+                                            {rightTeam?.name ?? ''}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
