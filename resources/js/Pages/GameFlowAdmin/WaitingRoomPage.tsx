@@ -101,7 +101,7 @@ export default function WaitingRoompage({ session, goNext }: Props) {
     return (
         <div className="bg-surface-gradient relative z-0 min-h-screen w-full overflow-hidden">
             <button
-                className="fixed bottom-4 left-4 z-50 h-8 w-[4rem] font-arsenal underline"
+                className="fixed bottom-36 left-4 z-50 h-8 w-[4rem] font-arsenal underline"
                 onClick={logout}
             >
                 Log out

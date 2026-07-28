@@ -1,5 +1,7 @@
 import Button from '@/Components/global/Button';
 import NextButton from '@/assets/icons/NextButtonSVG.svg?react';
+import Holdup from '@/assets/svgs/Holdup.svg';
+import PopupBox from '@/assets/svgs/PopupBox.svg';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { useAdminSession } from '@/hooks/useAdminSession';
 import { useSteps } from '@/hooks/useSteps';
@@ -28,6 +30,7 @@ export default function AdminFlowPage() {
     } = useAdminSession(!!user && !user.is_admin);
 
     const [groupInput, setGroupInput] = useState('');
+    const [showNextConfirm, setShowNextConfirm] = useState(false);
 
     // The monitoring-only admin account doesn't run a room - send it
     // straight to the overview dashboard instead of the group-number form.
@@ -77,7 +80,9 @@ export default function AdminFlowPage() {
                         if (isValid) createSession(groupInput.trim());
                     }}
                 >
-                    <p className="text-sm text-white/60">Login sebagai {user.name}</p>
+                    <p className="text-sm text-white/60">
+                        Login sebagai {user.name}
+                    </p>
                     <label htmlFor="group-pair" className="text-lg font-bold">
                         Nomor Kelompok (contoh: 1/2)
                     </label>
@@ -141,6 +146,11 @@ export default function AdminFlowPage() {
             });
     };
 
+    const confirmNext = () => {
+        setShowNextConfirm(false);
+        goNext();
+    };
+
     return (
         <div className="h-screen w-screen overflow-hidden">
             {step.type !== 'waiting' && (
@@ -148,8 +158,44 @@ export default function AdminFlowPage() {
                     Icon={NextButton}
                     className="absolute right-8 top-8 z-50"
                     iconClassName="w-48"
-                    onClick={goNext}
+                    onClick={() => setShowNextConfirm(true)}
                 />
+            )}
+
+            {showNextConfirm && (
+                <div className="animate-fade-in fixed inset-0 z-[100] flex items-center justify-center bg-black/70">
+                    <div className="animate-pop-in relative h-[25rem] w-[30rem]">
+                        <img
+                            className="absolute z-40 ml-4 block h-auto w-[20rem]"
+                            src={Holdup}
+                        />
+                        <img className="relative mt-16" src={PopupBox} />
+
+                        <div className="absolute left-1/2 top-44 flex -translate-x-1/2 flex-col gap-10">
+                            <div className="z-50 w-[25rem] text-center font-arsenal text-3xl font-bold">
+                                Apakah anda benar-benar yakin buat melanjutkan
+                                sesi?
+                            </div>
+
+                            <div className="flex justify-center gap-20 font-noto font-bold">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowNextConfirm(false)}
+                                    className="text-4xl transition-transform duration-150 hover:scale-110 active:scale-95"
+                                >
+                                    TIDAK
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={confirmNext}
+                                    className="text-4xl transition-transform duration-150 hover:scale-110 active:scale-95"
+                                >
+                                    IYA!!!
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {step.type === 'waiting' && (

@@ -121,7 +121,7 @@ export default function AnswerTheQuestionPage({
                 <div className="flex w-full items-center justify-between">
                     <div
                         ref={secondsRef}
-                        className="relative h-auto w-[7rem] origin-center"
+                        className="relative z-30 h-auto w-[7rem] origin-center"
                     >
                         <Seconds className="block h-auto w-full" />
 

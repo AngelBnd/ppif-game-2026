@@ -45,9 +45,6 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
         opts: step.content?.opts ?? [],
     };
 
-    // -1 while the answer hasn't loaded yet (or on a step with no options) -
-    // current_step_correct_answer only ever arrives for the admin/PIC who
-    // owns this session, see SessionController::withCorrectAnswer.
     const correctIdx = currentQuestion.opts.findIndex(
         (opt) => opt === session?.current_step_correct_answer,
     );
@@ -90,25 +87,11 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
                 },
             });
 
-            if (codieRef.current) {
-                timeline.fromTo(
-                    codieRef.current,
-                    {
-                        x: '-70%',
-                    },
-                    {
-                        x: 0,
-                        ease: 'power2.out',
-                        duration: 0.8,
-                    },
-                );
-            }
-
             timeline
                 .set(dialogueRef.current, {
                     xPercent: -30,
                     rotation: -4,
-                    scale: 0.95,
+                    scale: 1,
                     autoAlpha: 0,
                 })
                 .to(dialogueRef.current, {
@@ -173,14 +156,14 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
 
                 timeline.fromTo(
                     ref,
-                    { x: startX, y: 80, opacity: 0, scale: 0.8 },
+                    { x: startX, y: 80, opacity: 0, scale: 1 },
                     {
                         x: 0,
                         y: 0,
                         opacity: 1,
                         scale: 1,
                         duration: 0.45,
-                        ease: 'back.out(1.5)',
+                        ease: 'power2.out',
                         clearProps: 'transform,opacity',
                     },
                     '-=0.35',
@@ -222,17 +205,26 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
         if (!correctEl) return;
 
         optionsWaveTlRef.current?.kill();
-        gsap.set(optionRefs.current.filter(Boolean), {
-            clearProps: 'scale,rotate',
-        });
 
         const ctx = gsap.context(() => {
-            gsap.to(correctEl, {
-                scale: 1.04,
-                duration: 0.9,
-                repeat: -1,
-                yoyo: true,
-                ease: 'sine.inOut',
+            gsap.to(optionRefs.current.filter(Boolean), {
+                scale: 1,
+                rotate: 0,
+                duration: 0.3,
+                ease: 'power2.out',
+                onComplete: () => {
+                    gsap.fromTo(
+                        correctEl,
+                        { scale: 1 },
+                        {
+                            scale: 1.04,
+                            duration: 0.9,
+                            repeat: -1,
+                            yoyo: true,
+                            ease: 'sine.inOut',
+                        },
+                    );
+                },
             });
         }, containerRef);
 
@@ -272,19 +264,12 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
                 >
                     <Seconds className="block h-auto w-full" />
 
-                    <span className="absolute left-[60px] top-20 z-50 font-arsenal text-5xl font-bold text-[#FFFE25]">
+                    <span className="absolute left-[70px] top-20 z-50 font-arsenal text-5xl font-bold text-[#FFFE25]">
                         {remaining ?? step.time_limit_seconds ?? 60}
                     </span>
                 </div>
-                {/* 
-                <div
-                    ref={codieRef}
-                    className="absolute bottom-12 left-0 h-auto w-[25rem]"
-                >
-                    <Codie className="block h-auto w-full" />
-                </div> */}
 
-                <div className="mt-20 flex flex-col items-center justify-center">
+                <div className="z-50 mt-20 flex flex-col items-center justify-center">
                     <div className="relative h-[12rem] w-[60rem]">
                         <div
                             ref={dialogueRef}
@@ -360,7 +345,7 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
 
                                         <div className="absolute inset-0 z-10 px-8">
                                             <span
-                                                className={`-2 -blue-500 max-w-[350px] text-[20px] font-bold leading-snug text-white drop-shadow-md transition-colors duration-200 group-hover:text-yellow-300 md:text-[22px] ${textPositionStyles[idx] || 'absolute inset-0 flex items-center justify-center'} `}
+                                                className={`max-w-[350px] font-arsenal text-[20px] font-bold leading-snug text-white drop-shadow-md transition-colors duration-200 group-hover:text-yellow-300 md:text-[22px] ${textPositionStyles[idx] || 'absolute inset-0 flex items-center justify-center'} `}
                                             >
                                                 {option}
                                             </span>

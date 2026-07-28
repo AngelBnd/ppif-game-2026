@@ -54,8 +54,9 @@ export default function ActivityPage({ step }: Props) {
     return (
         <main
             ref={containerRef}
-            className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#090909] text-white"
+            className="relative flex min-h-screen items-center justify-center overflow-hidden text-white"
         >
+            <div className="absolute h-screen w-screen bg-[#0A0C0F] opacity-70" />
             <div
                 ref={bgCheckRef}
                 className="absolute"

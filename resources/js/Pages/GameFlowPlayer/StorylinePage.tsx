@@ -57,6 +57,7 @@ export default function StorylinePage({ step }: Props) {
             ref={containerRef}
             className="relative flex min-h-screen items-center justify-center overflow-hidden text-white"
         >
+            <div className="absolute h-screen w-screen bg-[#0A0C0F] opacity-70" />
             <div
                 ref={bgRef}
                 className="absolute inset-0 flex items-center justify-center"

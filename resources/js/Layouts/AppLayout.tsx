@@ -28,7 +28,7 @@ export default function AppLayout({
             <div className="relative z-40">
                 <TopBar />
 
-                <main className="z-10 min-h-screen">{children}</main>
+                <main className="z-30 min-h-screen">{children}</main>
                 <BottomFrame />
             </div>
         </div>
