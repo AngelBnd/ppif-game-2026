@@ -3,7 +3,7 @@ import NextButton from '@/assets/icons/NextButtonSVG.svg?react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { useAdminSession } from '@/hooks/useAdminSession';
 import { useSteps } from '@/hooks/useSteps';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ActivityPage from './ActivityPage';
 import AdminLoginPage from './AdminLoginPage';
@@ -13,6 +13,10 @@ import StorylinePage from './StorylinePage';
 import WaitingRoompage from './WaitingRoomPage';
 
 const GROUP_PAIR_PATTERN = /^\s*\d+\s*\/\s*\d+\s*$/;
+// PIC account names look like "PIC Kelompok 1/2" - pull the pair straight
+// from the account instead of making the PIC retype what their own login
+// already encodes.
+const GROUP_PAIR_IN_NAME = /(\d+\s*\/\s*\d+)/;
 
 export default function AdminFlowPage() {
     const { stepId } = useParams();
@@ -28,12 +32,31 @@ export default function AdminFlowPage() {
     } = useAdminSession(!!user && !user.is_admin);
 
     const [groupInput, setGroupInput] = useState('');
+    const [autoCreateError, setAutoCreateError] = useState('');
+    const autoCreateAttempted = useRef(false);
+
+    const groupPairFromName =
+        user && !user.is_admin ? (user.name.match(GROUP_PAIR_IN_NAME)?.[1] ?? null) : null;
 
     // The monitoring-only admin account doesn't run a room - send it
     // straight to the overview dashboard instead of the group-number form.
     useEffect(() => {
         if (user?.is_admin) navigate('/monitor', { replace: true });
     }, [user?.is_admin, navigate]);
+
+    // Skip the "type your group number" form entirely when the account
+    // already says which group it's for - only testing/generic accounts
+    // (whose name has no "X/Y" pair) fall back to asking manually.
+    useEffect(() => {
+        if (!user || user.is_admin) return;
+        if (isRestoring || session || isSessionLoading) return;
+        if (!groupPairFromName || autoCreateAttempted.current) return;
+
+        autoCreateAttempted.current = true;
+        createSession(groupPairFromName).catch(() => {
+            setAutoCreateError('Gagal membuat sesi otomatis, silakan coba lagi di bawah.');
+        });
+    }, [user, isRestoring, session, isSessionLoading, groupPairFromName, createSession]);
 
     const step = steps.find((item) => item.slug === stepId);
 
@@ -66,7 +89,18 @@ export default function AdminFlowPage() {
     }
 
     if (!session) {
-        const isValid = GROUP_PAIR_PATTERN.test(groupInput);
+        // Account maps to a group pair and auto-create hasn't failed - it's
+        // in flight, so there's nothing for the PIC to fill in or confirm.
+        if (groupPairFromName && !autoCreateError) {
+            return (
+                <main className="flex min-h-screen items-center justify-center bg-black text-white">
+                    <p>Menyiapkan sesi untuk Kelompok {groupPairFromName}...</p>
+                </main>
+            );
+        }
+
+        const effectiveGroupInput = groupInput || groupPairFromName || '';
+        const isValid = GROUP_PAIR_PATTERN.test(effectiveGroupInput);
 
         return (
             <main className="flex min-h-screen items-center justify-center bg-black text-white">
@@ -74,7 +108,7 @@ export default function AdminFlowPage() {
                     className="flex w-full max-w-xs flex-col gap-4 text-center"
                     onSubmit={(e) => {
                         e.preventDefault();
-                        if (isValid) createSession(groupInput.trim());
+                        if (isValid) createSession(effectiveGroupInput.trim());
                     }}
                 >
                     <p className="text-sm text-white/60">Login sebagai {user.name}</p>
@@ -84,12 +118,15 @@ export default function AdminFlowPage() {
                     <input
                         id="group-pair"
                         type="text"
-                        value={groupInput}
+                        value={effectiveGroupInput}
                         onChange={(e) => setGroupInput(e.target.value)}
                         placeholder="1/2"
                         className="rounded-xl px-4 py-3 text-center text-black"
                         disabled={isSessionLoading}
                     />
+                    {autoCreateError && (
+                        <p className="text-xs text-red-400">{autoCreateError}</p>
+                    )}
                     <button
                         type="submit"
                         disabled={!isValid || isSessionLoading}
