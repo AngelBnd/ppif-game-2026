@@ -14,6 +14,7 @@ Route::prefix('api/admin')->group(function () {
         Route::post('/game-sessions', [AdminSessionController::class, 'store']);
         Route::get('/my-session', [AdminSessionController::class, 'mine']);
         Route::patch('/game-sessions/{code}/advance', [AdminSessionController::class, 'advance']);
+        Route::delete('/game-sessions/{code}', [AdminSessionController::class, 'destroy']);
         Route::get('/overview', [AdminSessionController::class, 'overview']);
     });
 });
