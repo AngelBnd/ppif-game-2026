@@ -38,5 +38,16 @@ class PicAccountSeeder extends Seeder
                 ],
             );
         }
+
+        // Not tied to a real group pair - for testing the join/session flow
+        // without touching a real PIC's account.
+        User::updateOrCreate(
+            ['email' => 'iniAkunTesting@gmail.com'],
+            [
+                'name' => 'PIC Testing',
+                'password' => self::PASSWORD,
+                'is_admin' => false,
+            ],
+        );
     }
 }
