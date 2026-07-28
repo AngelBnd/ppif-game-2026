@@ -12,7 +12,7 @@ import AdminLoginPage from './AdminLoginPage';
 import AnswerTheQuestionPage from './AnswerTheQuestionPage';
 import BossFightPage from './BossFightPage';
 import StorylinePage from './StorylinePage';
-import WaitingRoompage from './WaitingRoomPage';
+import WaitingRoompage from './WaitingRoompage';
 
 const GROUP_PAIR_PATTERN = /^\s*\d+\s*\/\s*\d+\s*$/;
 
@@ -153,7 +153,7 @@ export default function AdminFlowPage() {
 
     return (
         <div className="h-screen w-screen overflow-hidden">
-            {step.type !== 'waiting' && (
+            {step.type !== 'waiting' && step.slug !== 'activity-4' && (
                 <Button
                     Icon={NextButton}
                     className="absolute right-8 top-8 z-50"

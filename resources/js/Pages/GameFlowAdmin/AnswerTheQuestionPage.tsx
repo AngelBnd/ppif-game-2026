@@ -34,6 +34,7 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
     const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
     const optionsWaveTlRef = useRef<gsap.core.Timeline | null>(null);
     const [codieIntroDone, setCodieIntroDone] = useState(false);
+    const [finish, setFinish] = useState(false);
 
     const remaining = useCountdown(
         session?.current_step_started_at,
@@ -81,6 +82,8 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
     };
 
     useLayoutEffect(() => {
+        setFinish(false);
+
         const ctx = gsap.context(() => {
             const timeline = gsap.timeline({
                 defaults: {
@@ -200,37 +203,44 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
     }, []);
 
     useEffect(() => {
-        if (!timeIsUp || correctIdx === -1) return;
+        if (correctIdx === -1) return;
+        if (!timeIsUp && answeredCount !== 2) return;
 
-        const correctEl = optionRefs.current[correctIdx];
-        if (!correctEl) return;
+        setFinish(true);
+    }, [timeIsUp, correctIdx, answeredCount]);
 
-        optionsWaveTlRef.current?.kill();
+    useEffect(() => {
+        if (finish) {
+            const correctEl = optionRefs.current[correctIdx];
+            if (!correctEl) return;
 
-        const ctx = gsap.context(() => {
-            gsap.to(optionRefs.current.filter(Boolean), {
-                scale: 1,
-                rotate: 0,
-                duration: 0.3,
-                ease: 'power2.out',
-                onComplete: () => {
-                    gsap.fromTo(
-                        correctEl,
-                        { scale: 1 },
-                        {
-                            scale: 1.04,
-                            duration: 0.9,
-                            repeat: -1,
-                            yoyo: true,
-                            ease: 'sine.inOut',
-                        },
-                    );
-                },
-            });
-        }, containerRef);
+            optionsWaveTlRef.current?.kill();
+            const ctx = gsap.context(() => {
+                gsap.to(optionRefs.current.filter(Boolean), {
+                    scale: 1,
 
-        return () => ctx.revert();
-    }, [timeIsUp, correctIdx]);
+                    rotate: 0,
+                    duration: 0.3,
+                    ease: 'power2.out',
+                    onComplete: () => {
+                        gsap.fromTo(
+                            correctEl,
+                            { scale: 1 },
+                            {
+                                scale: 1.04,
+                                duration: 0.9,
+                                repeat: -1,
+                                yoyo: true,
+                                ease: 'sine.inOut',
+                            },
+                        );
+                    },
+                });
+            }, containerRef);
+
+            return () => ctx.revert();
+        }
+    }, [finish]);
 
     return (
         <main className="pointer-events-none flex min-h-screen items-center justify-center overflow-hidden text-white">
@@ -366,7 +376,8 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
                                 const isCorrectReveal =
                                     timeIsUp && idx === correctIdx;
                                 const isDimmedOut =
-                                    timeIsUp && idx !== correctIdx;
+                                    (timeIsUp || answeredCount === 2) &&
+                                    idx !== correctIdx;
 
                                 return (
                                     <button

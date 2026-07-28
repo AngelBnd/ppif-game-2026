@@ -1,3 +1,5 @@
+import GameHubStoryline from '@/Components/about/GameHubStoryline';
+import { getStorylineConfig } from '@/Components/about/storylineConfig';
 import type { Step } from '@/types/step';
 
 type Props = {
@@ -5,19 +7,15 @@ type Props = {
 };
 
 export default function StorylinePage({ step }: Props) {
+    const { panels, triggers } = getStorylineConfig(step.slug);
+
     return (
-        <main className="flex min-h-screen items-center justify-center bg-[#1a1a1a] text-white">
-            <section className="w-[90%] max-w-5xl text-center">
-                <p className="text-sm uppercase tracking-[0.3em] text-white/50">
-                    Storyline
-                </p>
+        <main className="relative min-h-screen overflow-hidden bg-[#1a1a1a] text-white">
+            <p className="absolute left-8 top-8 z-40 text-sm uppercase tracking-[0.3em] text-white/50">
+                {step.title}
+            </p>
 
-                <h1 className="mt-4 text-6xl font-bold">{step.title}</h1>
-
-                <p className="mt-6 text-xl text-white/60">
-                    Placeholder for storyline screen.
-                </p>
-            </section>
+            <GameHubStoryline panels={panels} triggers={triggers} />
         </main>
     );
 }

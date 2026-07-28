@@ -13,27 +13,20 @@ class StepSeeder extends Seeder
      * everywhere.
      */
     private const DISTRACTOR_POOL = [
-        'Sinar rembulan yang pudar',
-        'Gema di lorong sekolah',
-        'Bayangan yang menari-nari',
-        'Angin yang berbisik pelan',
-        'Kilau debu di udara',
-        'Jejak kaki yang menghilang',
-        'Suara detak jam tua',
-        'Pantulan cahaya di jendela',
-        'Nyanyian dari ruang kosong',
-        'Percikan api yang padam',
-        'Retakan di dinding batu',
-        'Aroma hujan yang samar',
+        ['Arsip kuno Hope Universe', 'Arsip Kuno Dunia Sekarang', 'Arsip Kuno Dark Universe'], ['Kegelapan lagi', 'Bintang-bintang yang besar' , 'Rintikan air yang kilau' ], ['Gelap dan sering berubah', 'Berwarna-warni dan berisik' , 'Monotone dan berisik' ], ['Berdansa', 'Berenang' , 'Berjalan' ]
     ];
 
     /**
      * Builds a 4-option answer list with the correct answer mixed in at a
-     * random index, instead of always sitting first.
+     * random index, instead of always sitting first. $questionIndex picks
+     * which DISTRACTOR_POOL sub-array to draw from, so each question gets
+     * distractors written for it instead of a shared/generic pool.
      */
-    private function randomizedOpts(string $correctAnswer): array
+    private function randomizedOpts(string $correctAnswer, int $questionIndex): array
     {
-        $distractors = collect(self::DISTRACTOR_POOL)
+        $pool = self::DISTRACTOR_POOL[$questionIndex] ?? [];
+
+        $distractors = collect($pool)
             ->reject(fn (string $d) => $d === $correctAnswer)
             ->shuffle()
             ->take(3)
@@ -70,7 +63,7 @@ class StepSeeder extends Seeder
                 'title' => 'Answer The Question 0',
                 'content' => [
                     'question' => 'Dimanakah resep antibiotik ditemukan?',
-                    'opts' => $this->randomizedOpts('Arsip kuno Light Universe'),
+                    'opts' => $this->randomizedOpts('Arsip kuno Light Universe', 0),
                 ],
                 'correct_answer' => 'Arsip kuno Light Universe',
             ],
@@ -93,7 +86,7 @@ class StepSeeder extends Seeder
                 'title' => 'Answer The Question 1',
                 'content' => [
                     'question' => 'Apa yang terdengar di tengah-tengah kejanggalan dalam Universe Hope?',
-                    'opts' => $this->randomizedOpts('Titik-titik cahaya kecil'),
+                    'opts' => $this->randomizedOpts('Titik-titik cahaya kecil', 1),
                 ],
                 'correct_answer' => 'Titik-titik cahaya kecil',
             ],
@@ -116,7 +109,7 @@ class StepSeeder extends Seeder
                 'title' => 'Answer The Question 2',
                 'content' => [
                     'question' => 'Apa yang menjadi ciri-ciri dari Universe Change?',
-                    'opts' => $this->randomizedOpts('Terang dan damai'),
+                    'opts' => $this->randomizedOpts('Terang dan damai', 2),
                 ],
                 'correct_answer' => 'Terang dan damai',
             ],
@@ -139,10 +132,9 @@ class StepSeeder extends Seeder
                 'title' => 'Answer The Question 3',
                 'content' => [
                     'question' => 'Apa yang dilakukan oleh bayang-bayang dalam Universe Commitment?',
-                    'opts' => $this->randomizedOpts('Answer 3 placeholder'),
+                    'opts' => $this->randomizedOpts('Berbicara', 3),
                 ],
-                // Carried over from the old hardcoded placeholder — still needs a real answer filled in.
-                'correct_answer' => 'Answer 3 placeholder',
+                'correct_answer' => 'Berbicara',
             ],
             [
                 'order' => 13,
