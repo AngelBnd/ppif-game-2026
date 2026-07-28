@@ -30,6 +30,12 @@ class AnswerController extends Controller
 
         $player = Player::where('device_token', $validated['device_token'])->firstOrFail();
 
+        abort_unless(
+            $player->team->game_session_id === $session->id,
+            403,
+            'This player does not belong to this session.',
+        );
+
         $progress = StepProgress::where('game_session_id', $session->id)
             ->where('step_id', $session->current_step_id)
             ->whereNull('deactivated_at')

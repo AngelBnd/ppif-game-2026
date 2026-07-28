@@ -118,8 +118,9 @@ export function useAdminSession(enabled: boolean) {
     const advanceSession = useCallback(async () => {
         if (!session) throw new Error('No active session');
 
-        const res = await fetch(`/api/game-sessions/${session.code}/advance`, {
+        const res = await fetch(`/api/admin/game-sessions/${session.code}/advance`, {
             method: 'PATCH',
+            headers: { 'X-XSRF-TOKEN': getXsrfToken() },
         });
 
         if (!res.ok) throw new Error('Failed to advance session');

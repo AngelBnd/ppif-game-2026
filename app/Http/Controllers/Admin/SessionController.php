@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Events\StepAdvanced;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\GameSessionResource;
 use App\Models\GameSession;
 use App\Models\LeaderboardEntry;
 use App\Models\Step;
 use App\Models\StepProgress;
+use App\Models\Team;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -72,6 +74,68 @@ class SessionController extends Controller
         return response()->json([
             'data' => $session ? new GameSessionResource($session) : null,
         ]);
+    }
+
+    /**
+     * Advance the session's current step. Restricted to the PIC who owns
+     * this session (or the monitoring admin) - previously this was a public
+     * endpoint, letting anyone who knew a room's code hijack its pacing.
+     */
+    public function advance(Request $request, string $code)
+    {
+        $session = GameSession::where('code', $code)->with('currentStep')->firstOrFail();
+
+        abort_unless(
+            $session->user_id === $request->user()->id || $request->user()->is_admin,
+            403,
+            'This is not your session.',
+        );
+
+        $nextStep = Step::where('order', $session->currentStep->order + 1)->first();
+
+        if (! $nextStep) {
+            $session->update(['status' => 'finished', 'finished_at' => now()]);
+
+            $session = $session->fresh(['teams.players', 'currentStep']);
+            event(new StepAdvanced($session));
+
+            return new GameSessionResource($session);
+        }
+
+        DB::transaction(function () use ($session, $nextStep) {
+            StepProgress::where('game_session_id', $session->id)
+                ->whereNull('deactivated_at')
+                ->update(['deactivated_at' => now()]);
+
+            StepProgress::create([
+                'game_session_id' => $session->id,
+                'step_id' => $nextStep->id,
+                'activated_at' => now(),
+            ]);
+
+            $session->update([
+                'current_step_id' => $nextStep->id,
+                'status' => 'active',
+            ]);
+
+            // Boss fight state (phase/HP) and each team's tap-contribution
+            // meter only ever mean something during the boss step - reset
+            // them fresh every time a session enters it.
+            if ($nextStep->type === 'boss') {
+                $session->update([
+                    'boss_phase' => 1,
+                    'boss_hp' => GameSession::BOSS_PHASE_MAX_HP[1],
+                    'boss_finished_at' => null,
+                ]);
+
+                Team::where('game_session_id', $session->id)->update(['hp' => 0]);
+            }
+        });
+
+        $session = $session->fresh(['teams.players', 'currentStep']);
+        event(new StepAdvanced($session));
+
+        return new GameSessionResource($session);
     }
 
     /**

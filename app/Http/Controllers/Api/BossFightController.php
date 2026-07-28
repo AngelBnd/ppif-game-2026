@@ -33,6 +33,12 @@ class BossFightController extends Controller
 
         $player = Player::where('device_token', $validated['device_token'])->firstOrFail();
 
+        abort_unless(
+            $player->team->game_session_id === $session->id,
+            403,
+            'This player does not belong to this session.',
+        );
+
         abort_if($session->boss_finished_at !== null, 409, 'Boss fight already over.');
 
         [$session, $phaseChanged, $cutscene] = DB::transaction(function () use ($session, $validated) {
