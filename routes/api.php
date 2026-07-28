@@ -10,6 +10,5 @@ Route::get('/steps', [StepController::class, 'index']);
 
 Route::get('/game-sessions/{code}', [GameSessionController::class, 'show']);
 Route::post('/game-sessions/{code}/join', [GameSessionController::class, 'join']);
-Route::patch('/game-sessions/{code}/advance', [GameSessionController::class, 'advance']);
 Route::post('/game-sessions/{code}/answers', [AnswerController::class, 'store']);
 Route::post('/game-sessions/{code}/boss/taps', [BossFightController::class, 'tap']);
