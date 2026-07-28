@@ -8,7 +8,6 @@ import FIGHT from '@/assets/monitor/FGHT.svg?react';
 import Fire from '@/assets/monitor/FIRE.svg?react';
 import QuestBox from '@/assets/monitor/QuestBox.svg?react';
 import Bullets from '@/assets/monitor/bullets.svg?react';
-import PlaceholderBoss from '@/assets/monitor/placeholderboss.png';
 import Taptap from '@/assets/monitor/taptap.svg?react';
 import Thing from '@/assets/monitor/things.svg?react';
 import type { SessionInfo } from '@/types/gameSession';
@@ -42,7 +41,10 @@ export default function BossFightPage({ step, session }: Props) {
         const phase = session?.boss_phase;
         if (phase === undefined) return;
 
-        if (prevPhaseRef.current !== undefined && phase !== prevPhaseRef.current) {
+        if (
+            prevPhaseRef.current !== undefined &&
+            phase !== prevPhaseRef.current
+        ) {
             setPhaseBanner(phase);
             const timeout = setTimeout(() => setPhaseBanner(null), 1500);
             prevPhaseRef.current = phase;
@@ -74,6 +76,7 @@ export default function BossFightPage({ step, session }: Props) {
     const bossGroupRef = useRef<HTMLDivElement>(null);
     const fightRef = useRef<HTMLDivElement>(null);
     const bossOverlayRef = useRef<HTMLDivElement>(null);
+    const crosshairPulseRef = useRef<HTMLDivElement>(null);
 
     useLayoutEffect(() => {
         const container = containerRef.current;
@@ -309,6 +312,23 @@ export default function BossFightPage({ step, session }: Props) {
         return () => ctx.revert();
     }, []);
 
+    useEffect(() => {
+        if (!crosshairPulseRef.current) return;
+
+        const tween = gsap.to(crosshairPulseRef.current, {
+            scale: 1.35,
+            duration: 0.6,
+            rotate: 5,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut',
+        });
+
+        return () => {
+            tween.kill();
+        };
+    }, []);
+
     return (
         <main
             ref={containerRef}
@@ -347,7 +367,7 @@ export default function BossFightPage({ step, session }: Props) {
 
             <div
                 ref={bossHealthRef}
-                className="absolute left-4 top-24 origin-center"
+                className="absolute left-4 top-24 z-30 origin-center"
             >
                 <BossHealthBar currentHP={bossHp} maxHP={bossHpMax} />
             </div>
@@ -393,14 +413,23 @@ export default function BossFightPage({ step, session }: Props) {
                 <QuestBox className="block h-auto w-full" />
             </div>
 
-            <div className="absolute left-[55%] top-[16%] z-0">
-                <img
-                    src={PlaceholderBoss}
-                    alt="Boss"
-                    className="block h-auto w-[20rem]"
-                />
+            <div className="absolute left-[47%] top-[10%] z-0">
+                <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="block h-auto w-[24rem]"
+                >
+                    <source src="/videos/puppetcodie.webm" type="video/webm" />
+                </video>
 
-                <CrossHair className="absolute bottom-0 left-24 z-20 w-[12rem]" />
+                <div
+                    ref={crosshairPulseRef}
+                    className="absolute bottom-4 left-48 z-20 w-[12rem]"
+                >
+                    <CrossHair className="block h-auto w-full" />
+                </div>
             </div>
             <div
                 ref={bossOverlayRef}
