@@ -1,10 +1,12 @@
 import Button from '@/Components/global/Button';
 import NextButton from '@/assets/icons/NextButtonSVG.svg?react';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { useAdminSession } from '@/hooks/useAdminSession';
 import { useSteps } from '@/hooks/useSteps';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ActivityPage from './ActivityPage';
+import AdminLoginPage from './AdminLoginPage';
 import AnswerTheQuestionPage from './AnswerTheQuestionPage';
 import BossFightPage from './BossFightPage';
 import StorylinePage from './StorylinePage';
@@ -16,19 +18,46 @@ export default function AdminFlowPage() {
     const { stepId } = useParams();
     const navigate = useNavigate();
     const { steps, isLoading } = useSteps();
+    const { user, isLoading: isAuthLoading, login, logout } = useAdminAuth();
     const {
         session,
         isRestoring,
         isLoading: isSessionLoading,
         createSession,
         advanceSession,
-    } = useAdminSession();
+    } = useAdminSession(!!user && !user.is_admin);
 
     const [groupInput, setGroupInput] = useState('');
 
+    // The monitoring-only admin account doesn't run a room - send it
+    // straight to the overview dashboard instead of the group-number form.
+    useEffect(() => {
+        if (user?.is_admin) navigate('/monitor', { replace: true });
+    }, [user?.is_admin, navigate]);
+
     const step = steps.find((item) => item.slug === stepId);
 
-    if (isLoading || isRestoring) {
+    if (isLoading || isAuthLoading) {
+        return (
+            <main className="flex min-h-screen items-center justify-center bg-black text-white">
+                <p>Loading...</p>
+            </main>
+        );
+    }
+
+    if (!user) {
+        return <AdminLoginPage onLogin={login} />;
+    }
+
+    if (user.is_admin) {
+        return (
+            <main className="flex min-h-screen items-center justify-center bg-black text-white">
+                <p>Loading...</p>
+            </main>
+        );
+    }
+
+    if (isRestoring) {
         return (
             <main className="flex min-h-screen items-center justify-center bg-black text-white">
                 <p>Loading...</p>
@@ -48,6 +77,7 @@ export default function AdminFlowPage() {
                         if (isValid) createSession(groupInput.trim());
                     }}
                 >
+                    <p className="text-sm text-white/60">Login sebagai {user.name}</p>
                     <label htmlFor="group-pair" className="text-lg font-bold">
                         Nomor Kelompok (contoh: 1/2)
                     </label>
@@ -66,6 +96,13 @@ export default function AdminFlowPage() {
                         className="rounded-xl bg-white px-6 py-3 text-black disabled:opacity-40"
                     >
                         {isSessionLoading ? 'Membuat sesi...' : 'Mulai Sesi'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={logout}
+                        className="text-xs text-white/40 underline"
+                    >
+                        Logout
                     </button>
                 </form>
             </main>
