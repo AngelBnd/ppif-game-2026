@@ -16,7 +16,7 @@ import type { SessionInfo } from '@/types/gameSession';
 import type { Step } from '@/types/step';
 
 import gsap from 'gsap';
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 type Props = {
     step: Step;
@@ -33,6 +33,7 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
     const exclShapeRef = useRef<HTMLImageElement>(null);
     const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
     const optionsWaveTlRef = useRef<gsap.core.Timeline | null>(null);
+    const [codieIntroDone, setCodieIntroDone] = useState(false);
 
     const remaining = useCountdown(
         session?.current_step_started_at,
@@ -234,6 +235,18 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
     return (
         <main className="pointer-events-none flex min-h-screen items-center justify-center overflow-hidden text-white">
             <div className="absolute z-0 h-screen w-screen bg-[#7C131E] opacity-70" />
+            <video
+                autoPlay
+                muted
+                playsInline
+                className="absolute -top-12 z-0 h-screen w-screen object-cover"
+                onEnded={(e) => {
+                    e.currentTarget.currentTime = 3;
+                    e.currentTarget.play();
+                }}
+            >
+                <source src="/videos/outputcodie.webm" type="video/webm" />
+            </video>
             <div ref={containerRef} className="relative h-screen w-screen">
                 <div
                     ref={hpRef}
@@ -264,16 +277,51 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
                 >
                     <Seconds className="block h-auto w-full" />
 
-                    <span className="absolute left-[70px] top-20 z-50 font-arsenal text-5xl font-bold text-[#FFFE25]">
+                    <span className="absolute left-[66px] top-20 z-50 font-arsenal text-5xl font-bold text-[#FFFE25]">
                         {remaining ?? step.time_limit_seconds ?? 60}
                     </span>
                 </div>
 
-                <div className="z-50 mt-20 flex flex-col items-center justify-center">
-                    <div className="relative h-[12rem] w-[60rem]">
+                <div
+                    ref={codieRef}
+                    className="absolute bottom-12 left-0 z-0 h-auto"
+                >
+                    {!codieIntroDone ? (
+                        <video
+                            key="intro"
+                            autoPlay
+                            muted
+                            playsInline
+                            className="block h-auto w-full"
+                            onEnded={() => setCodieIntroDone(true)}
+                        >
+                            <source
+                                src="/videos/CODIEDYNAMIC.webm"
+                                type="video/webm"
+                            />
+                        </video>
+                    ) : (
+                        <video
+                            key="static"
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="block h-auto w-full"
+                        >
+                            <source
+                                src="/videos/CODIESTATIC1.webm"
+                                type="video/webm"
+                            />
+                        </video>
+                    )}
+                </div>
+
+                <div className="z-50 mt-24 flex flex-col items-center justify-center">
+                    <div className="relative top-7 h-[12rem] w-[60rem]">
                         <div
                             ref={dialogueRef}
-                            className="relative !left-96 bottom-0"
+                            className="relative !left-72 bottom-0"
                         >
                             <img
                                 ref={exclShapeRef}

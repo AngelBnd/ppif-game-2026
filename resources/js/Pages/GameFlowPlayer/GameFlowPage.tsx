@@ -68,14 +68,15 @@ export default function PlayerFlowPage() {
 
             <span className="px-2 py-1">{stepId ?? '?'}</span>
 
-            <button
-                type="button"
-                disabled={!nextStep}
-                onClick={() => nextStep && goToDevStep(nextStep.slug)}
-                className="rounded-full bg-white/10 px-3 py-1 disabled:opacity-30"
-            >
-                Next →
-            </button>
+            {nextStep && (
+                <button
+                    type="button"
+                    onClick={() => goToDevStep(nextStep.slug)}
+                    className="rounded-full bg-white/10 px-3 py-1"
+                >
+                    Next →
+                </button>
+            )}
         </div>
     );
 
