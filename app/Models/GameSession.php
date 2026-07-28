@@ -16,13 +16,14 @@ class GameSession extends Model
      * triggers the scripted "impossible to win" cutscene instead of a
      * normal phase transition. Placeholder numbers - tune freely.
      */
-    public const BOSS_PHASE_MAX_HP = [1 => 150, 2 => 150, 3 => 150];
+    public const BOSS_PHASE_MAX_HP = [1 => 300, 2 => 300, 3 => 300];
 
     public const BOSS_PHASE3_CUTSCENE_THRESHOLD = 15;
 
     public const MAX_PLAYERS_PER_TEAM = 3;
 
     protected $fillable = [
+        'user_id',
         'code',
         'class_name',
         'status',
@@ -51,6 +52,11 @@ class GameSession extends Model
     public function currentStep(): BelongsTo
     {
         return $this->belongsTo(Step::class, 'current_step_id');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function teams(): HasMany

@@ -18,7 +18,7 @@ import gsap from 'gsap';
 // GameSession::BOSS_PHASE_MAX_HP on the backend. Used only to size the
 // "contribution" meter so it fills up gradually over the whole fight
 // instead of maxing out almost immediately.
-const TEAM_CONTRIBUTION_MAX = 450;
+const TEAM_CONTRIBUTION_MAX = 900;
 
 // Batches taps client-side and flushes on an interval instead of firing an
 // HTTP request per tap - see BossFightController@tap for the server side.
@@ -35,6 +35,9 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
     const containerRef = useRef<HTMLElement>(null);
     const pendingTapsRef = useRef(0);
     const [cutscene, setCutscene] = useState(false);
+    // Placeholder instructional overlay ("offer informative feedback" before
+    // asking players to act) - frontend to restyle/animate this later.
+    const [showIntro, setShowIntro] = useState(true);
     const [phaseBanner, setPhaseBanner] = useState<number | null>(null);
     const prevPhaseRef = useRef<number | undefined>(undefined);
     const phaseBannerRef = useRef<HTMLDivElement>(null);
@@ -243,6 +246,10 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
     const handleFireTap = () => {
         if (isFinished) return;
 
+        // First tap doubles as "dismiss the instructions" - still counts
+        // toward the boss's HP, no wasted tap.
+        if (showIntro) setShowIntro(false);
+
         pendingTapsRef.current += 1;
 
         gsap.killTweensOf(fireRef.current);
@@ -330,6 +337,24 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
                     >
                         <p className="rounded bg-black/70 px-6 py-2 font-arsenal text-3xl font-bold text-[#FFFE25]">
                             PHASE {phaseBanner}
+                        </p>
+                    </div>
+                )}
+
+                {showIntro && !isFinished && (
+                    // PLACEHOLDER - frontend team to redesign/restyle this.
+                    // Tells players what to do before they need to do it
+                    // (Shneiderman's "offer informative feedback").
+                    <div className="absolute inset-0 z-[65] flex flex-col items-center justify-center gap-3 bg-black/80 px-8 text-center">
+                        <p className="font-arsenal text-2xl font-bold text-[#FFFE25]">
+                            TAP LAYAR SECEPAT MUNGKIN!
+                        </p>
+                        <p className="text-sm text-white/80">
+                            Semua anggota tim ikut tap buat bantu serang
+                            boss.
+                        </p>
+                        <p className="mt-4 text-xs text-white/50">
+                            (Tap di mana saja untuk mulai)
                         </p>
                     </div>
                 )}

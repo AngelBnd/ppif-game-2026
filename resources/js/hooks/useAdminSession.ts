@@ -1,17 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { echo } from '@/echo';
+import { getXsrfToken } from '@/utils/csrf';
 import type { BossTapResult, SessionInfo } from '@/types/gameSession';
 
-const STORAGE_KEY = 'ppif_admin_session_code';
-
-export function useAdminSession() {
+export function useAdminSession(enabled: boolean) {
     const [session, setSession] = useState<SessionInfo | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    // True until the initial check of localStorage for a saved session PIN
-    // has resolved one way or another. AdminFlowPage must wait for this
-    // before deciding to auto-create a new session - otherwise it races
-    // the restore fetch below and creates an orphan session on every
-    // reload of an admin tab that already had one in progress.
+    // True until the initial "does this PIC account already have an active
+    // session" lookup has resolved. AdminFlowPage must wait for this before
+    // deciding to show the create-session form - otherwise it races the
+    // restore fetch below and creates an orphan session on every reload.
     const [isRestoring, setIsRestoring] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -23,21 +21,22 @@ export function useAdminSession() {
         return body.data as SessionInfo;
     }, []);
 
+    // Resumes the PIC's current session by account, not by localStorage -
+    // survives cleared browser storage, incognito, or switching devices.
     useEffect(() => {
-        const savedCode = localStorage.getItem(STORAGE_KEY);
-        if (!savedCode) {
+        if (!enabled) {
             setIsRestoring(false);
             return;
         }
 
-        setIsLoading(true);
-        fetchByCode(savedCode)
-            .catch(() => localStorage.removeItem(STORAGE_KEY))
-            .finally(() => {
-                setIsLoading(false);
-                setIsRestoring(false);
-            });
-    }, [fetchByCode]);
+        setIsRestoring(true);
+        fetch('/api/admin/my-session', { headers: { Accept: 'application/json' } })
+            .then((res) => res.json())
+            .then((body) => {
+                if (body.data) setSession(body.data);
+            })
+            .finally(() => setIsRestoring(false));
+    }, [enabled]);
 
     // Keeps the admin screen live-synced: step changes, players joining
     // (join_count in WaitingRoomPage), and the "X/2 has answered" counter.
@@ -93,16 +92,18 @@ export function useAdminSession() {
         setError(null);
 
         try {
-            const res = await fetch('/api/game-sessions', {
+            const res = await fetch('/api/admin/game-sessions', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': getXsrfToken(),
+                },
                 body: JSON.stringify({ class_name: className ?? null }),
             });
 
             if (!res.ok) throw new Error('Failed to create session');
 
             const body = await res.json();
-            localStorage.setItem(STORAGE_KEY, body.data.code);
             setSession(body.data);
 
             return body.data as SessionInfo;

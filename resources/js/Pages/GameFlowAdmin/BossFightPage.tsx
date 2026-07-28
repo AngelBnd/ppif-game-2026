@@ -19,7 +19,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 // Must match TEAM_CONTRIBUTION_MAX in the player BossFightPage (and the
 // sum of GameSession::BOSS_PHASE_MAX_HP on the backend).
-const TEAM_CONTRIBUTION_MAX = 450;
+const TEAM_CONTRIBUTION_MAX = 900;
 
 type Props = {
     step: Step;

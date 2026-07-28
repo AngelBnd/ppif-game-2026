@@ -16,47 +16,6 @@ use Illuminate\Support\Str;
 
 class GameSessionController extends Controller
 {
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'class_name' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $firstStep = Step::orderBy('order')->firstOrFail();
-
-        // PIC inputs the two group numbers as "1/2" - use them as the team
-        // names so the leaderboard can tell groups apart. Falls back to
-        // generic names if the format doesn't match (e.g. left blank).
-        $groupNumbers = null;
-        if (! empty($validated['class_name']) && preg_match('/^\s*(\d+)\s*\/\s*(\d+)\s*$/', $validated['class_name'], $matches)) {
-            $groupNumbers = [$matches[1], $matches[2]];
-        }
-
-        $session = DB::transaction(function () use ($validated, $firstStep, $groupNumbers) {
-            $session = GameSession::create([
-                'code' => $this->generateUniqueCode(),
-                'class_name' => $validated['class_name'] ?? null,
-                'status' => 'waiting',
-                'current_step_id' => $firstStep->id,
-            ]);
-
-            $session->teams()->createMany([
-                ['name' => $groupNumbers ? "Kelompok {$groupNumbers[0]}" : 'Kelompok A'],
-                ['name' => $groupNumbers ? "Kelompok {$groupNumbers[1]}" : 'Kelompok B'],
-            ]);
-
-            StepProgress::create([
-                'game_session_id' => $session->id,
-                'step_id' => $firstStep->id,
-                'activated_at' => now(),
-            ]);
-
-            return $session;
-        });
-
-        return new GameSessionResource($session->load('teams.players', 'currentStep'));
-    }
-
     public function show(string $code)
     {
         $session = GameSession::where('code', $code)
@@ -156,14 +115,5 @@ class GameSessionController extends Controller
         event(new StepAdvanced($session));
 
         return new GameSessionResource($session);
-    }
-
-    private function generateUniqueCode(): string
-    {
-        do {
-            $code = (string) random_int(100000, 999999);
-        } while (GameSession::where('code', $code)->exists());
-
-        return $code;
     }
 }
