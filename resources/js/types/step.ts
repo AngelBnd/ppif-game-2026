@@ -6,6 +6,6 @@ export type Step = {
     slug: string;
     type: StepType;
     title: string;
-    content: { question?: string } | null;
+    content: { question?: string; opts?: string[] } | null;
     time_limit_seconds: number | null;
 };

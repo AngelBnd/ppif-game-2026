@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import type { Step } from '@/types/step';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import type { SessionInfo } from '@/types/gameSession';
+import type { Step } from '@/types/step';
+import { useEffect, useState } from 'react';
 
 type Props = {
     step: Step;
@@ -10,6 +11,7 @@ type Props = {
 
 export default function WaitingRoompage({ session, goNext }: Props) {
     const pin = session?.code ?? '';
+    const { user, isLoading: isAuthLoading, login, logout } = useAdminAuth();
     const maxPlayers = session?.max_players_per_team ?? 3;
     const leftTeam = session?.teams[0];
     const rightTeam = session?.teams[1];
@@ -97,13 +99,20 @@ export default function WaitingRoompage({ session, goNext }: Props) {
     }
 
     return (
-        <div className="relative z-0 min-h-screen w-full overflow-hidden bg-surface-gradient">
+        <div className="bg-surface-gradient relative z-0 min-h-screen w-full overflow-hidden">
+            <button
+                className="fixed bottom-4 left-4 z-50 h-8 w-[4rem] font-arsenal underline"
+                onClick={logout}
+            >
+                Log out
+            </button>
+
             {/*  BACKGROUND LAYER */}
             <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 select-none"
             >
-                <div className="z-0 h-screen w-screen bg-[#0A0C0F]" />
+                <div className="z-0 h-screen w-screen" />
 
                 {/* 1. vector — paling belakang */}
                 <div className="z-1 absolute inset-0 bg-[url('/starting-page/vector-99.svg')] bg-[length:auto_100%] bg-right bg-no-repeat" />
@@ -129,7 +138,7 @@ export default function WaitingRoompage({ session, goNext }: Props) {
                 {leftCount >= 1 ? (
                     /* SIGNED: bungkus dalem relative biar nama-tim nempel ke board */
                     <div className="absolute right-[16%] top-[3%] z-[9] w-[20%]">
-                        <div className="relative w-full animate-persona-in">
+                        <div className="animate-persona-in relative w-full">
                             <img
                                 src="/starting-page/BOARD-STATUS-LEFT(SIGNED).svg"
                                 alt=""
@@ -176,7 +185,7 @@ export default function WaitingRoompage({ session, goNext }: Props) {
                 {rightCount >= 1 ? (
                     /* SIGNED: bungkus dalem relative biar nama-tim-kanan nempel ke board */
                     <div className="absolute right-[2%] top-[8%] z-[8] w-[25%]">
-                        <div className="relative w-full animate-persona-in">
+                        <div className="animate-persona-in relative w-full">
                             <img
                                 src="/starting-page/BOARD-STATUS-RIGHT(SIGNED).png"
                                 alt=""

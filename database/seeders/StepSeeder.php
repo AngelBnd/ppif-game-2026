@@ -30,7 +30,11 @@ class StepSeeder extends Seeder
                 'slug' => 'answer-0',
                 'type' => 'answer',
                 'title' => 'Answer The Question 0',
-                'content' => ['question' => 'Dimanakah resep antibiotik ditemukan?'],
+                'content' => [
+                    'question' => 'Dimanakah resep antibiotik ditemukan?',
+                    // Placeholder distractors - swap for real options.
+                    'opts' => ['Arsip kuno Light Universe', 'Option B placeholder', 'Option C placeholder', 'Option D placeholder'],
+                ],
                 'correct_answer' => 'Arsip kuno Light Universe',
             ],
             [
@@ -50,7 +54,10 @@ class StepSeeder extends Seeder
                 'slug' => 'answer-1',
                 'type' => 'answer',
                 'title' => 'Answer The Question 1',
-                'content' => ['question' => 'Apa yang terdengar di tengah-tengah kejanggalan dalam Universe Hope?'],
+                'content' => [
+                    'question' => 'Apa yang terdengar di tengah-tengah kejanggalan dalam Universe Hope?',
+                    'opts' => ['Titik-titik cahaya kecil', 'Option B placeholder', 'Option C placeholder', 'Option D placeholder'],
+                ],
                 'correct_answer' => 'Titik-titik cahaya kecil',
             ],
             [
@@ -70,7 +77,10 @@ class StepSeeder extends Seeder
                 'slug' => 'answer-2',
                 'type' => 'answer',
                 'title' => 'Answer The Question 2',
-                'content' => ['question' => 'Apa yang menjadi ciri-ciri dari Universe Change?'],
+                'content' => [
+                    'question' => 'Apa yang menjadi ciri-ciri dari Universe Change?',
+                    'opts' => ['Terang dan damai', 'Option B placeholder', 'Option C placeholder', 'Option D placeholder'],
+                ],
                 'correct_answer' => 'Terang dan damai',
             ],
             [
@@ -90,7 +100,10 @@ class StepSeeder extends Seeder
                 'slug' => 'answer-3',
                 'type' => 'answer',
                 'title' => 'Answer The Question 3',
-                'content' => ['question' => 'Apa yang dilakukan oleh bayang-bayang dalam Universe Commitment?'],
+                'content' => [
+                    'question' => 'Apa yang dilakukan oleh bayang-bayang dalam Universe Commitment?',
+                    'opts' => ['Answer 3 placeholder', 'Option B placeholder', 'Option C placeholder', 'Option D placeholder'],
+                ],
                 // Carried over from the old hardcoded placeholder — still needs a real answer filled in.
                 'correct_answer' => 'Answer 3 placeholder',
             ],

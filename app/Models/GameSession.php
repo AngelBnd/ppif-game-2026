@@ -73,4 +73,22 @@ class GameSession extends Model
     {
         return $this->hasMany(StepProgress::class);
     }
+
+    /**
+     * The still-active step_progress row for whatever step is current -
+     * its activated_at is the shared clock every client's countdown is
+     * computed from, instead of each device timing its own local 60s.
+     */
+    public function currentStepProgress(): ?StepProgress
+    {
+        if (! $this->current_step_id) {
+            return null;
+        }
+
+        return $this->stepProgress()
+            ->where('step_id', $this->current_step_id)
+            ->whereNull('deactivated_at')
+            ->latest('activated_at')
+            ->first();
+    }
 }

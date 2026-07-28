@@ -1,5 +1,6 @@
 import StorylinePayAttention from '@/assets/phone/Storyline.svg?react';
 import StreakBG from '@/assets/phone/STREAKBG.svg?react';
+import TriangleThing from '@/Components/monitor/TriangleThing';
 import type { Step } from '@/types/step';
 
 import gsap from 'gsap';
@@ -67,6 +68,14 @@ export default function StorylinePage({ step }: Props) {
             </div>
 
             <div ref={storylineRef} className="relative z-10">
+                <TriangleThing
+                    className="absolute left-4 z-50 rotate-45"
+                    size="2.5rem"
+                />
+                <TriangleThing
+                    className="absolute -bottom-6 right-3 z-50 rotate-[220deg]"
+                    size="3rem"
+                />
                 <StorylinePayAttention className="h-auto w-full" />
             </div>
         </main>

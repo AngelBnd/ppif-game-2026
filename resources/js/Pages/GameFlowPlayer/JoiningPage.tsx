@@ -1,10 +1,10 @@
 import InputBorderBottom from '@/assets/phone/InputBorderBottomSVG.svg?react';
 import InputYourCode from '@/assets/phone/inputurcode.svg?react';
 import StreakBG from '@/assets/phone/STREAKBG.svg?react';
+import type { SessionInfo } from '@/types/gameSession';
+import type { Step } from '@/types/step';
 import gsap from 'gsap';
 import { useRef, useState } from 'react';
-import type { Step } from '@/types/step';
-import type { SessionInfo } from '@/types/gameSession';
 
 type Props = {
     step: Step;
@@ -201,7 +201,7 @@ export default function JoinRoomPage({ onPeek, onJoin }: Props) {
     if (joined) {
         return (
             <main className="flex min-h-screen items-center justify-center text-white">
-                <p className="text-xl font-semibold">
+                <p className="font-arsenal text-xl font-semibold">
                     You're in! Waiting for the admin to start...
                 </p>
             </main>
@@ -218,31 +218,34 @@ export default function JoinRoomPage({ onPeek, onJoin }: Props) {
                     <InputYourCode className="w-[20em] rotate-[-8deg]" />
                 </div>
 
-                <div className="relative mt-10 h-[2rem] w-[29rem]">
-                    <StreakBG className="absolute left-1/2 top-1/2 w-[40rem] -translate-x-1/2 -translate-y-1/2 object-cover" />
-                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 -rotate-12">
+                <div className="relative mt-10 flex h-[3rem] w-full flex-col items-center justify-center">
+                    <StreakBG className="absolute left-1/2 top-1/2 w-full -translate-x-1/2 -translate-y-1/2 object-cover" />
+                    <div className="relative">
                         <CodeInput
                             length={6}
                             inputBgRefs={inputBgRefs}
                             onComplete={handleCodeComplete}
                         />
                     </div>
+
+                    {error && (
+                        <p className="relative mt-8 font-arsenal text-sm font-semibold text-red-400">
+                            {error}
+                        </p>
+                    )}
                 </div>
 
-                {error && (
-                    <p className="mt-4 text-sm font-semibold text-red-400">
-                        {error}
-                    </p>
-                )}
-
                 {isChecking && (
-                    <p className="mt-6 text-sm text-white/60">Mengecek kode...</p>
+                    <p className="mt-6 text-sm text-white/60">
+                        Mengecek kode...
+                    </p>
                 )}
 
                 {teams && (
                     <div className="mt-10 flex w-64 flex-col gap-3">
                         {teams.map((team) => {
-                            const isFull = team.players.length >= maxPlayersPerTeam;
+                            const isFull =
+                                team.players.length >= maxPlayersPerTeam;
 
                             return (
                                 <button
@@ -251,7 +254,9 @@ export default function JoinRoomPage({ onPeek, onJoin }: Props) {
                                     disabled={isFull || isJoining}
                                     className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-black transition-transform hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
-                                    <span className="font-semibold">{team.name}</span>
+                                    <span className="font-semibold">
+                                        {team.name}
+                                    </span>
                                     <span className="text-sm text-black/60">
                                         {isFull
                                             ? 'Penuh'

@@ -14,6 +14,11 @@ export type SessionInfo = {
     class_name: string | null;
     status: 'waiting' | 'active' | 'finished';
     current_step: Step | null;
+    // Shared clock every client's countdown is computed from - always
+    // present (safe to broadcast). See useCountdown.
+    current_step_started_at: string | null;
+    // Admin/PIC only - never present for players, see SessionController::withCorrectAnswer.
+    current_step_correct_answer?: string | null;
     started_at: string | null;
     finished_at: string | null;
     teams: TeamInfo[];

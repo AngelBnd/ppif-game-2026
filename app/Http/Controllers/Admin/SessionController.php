@@ -56,7 +56,9 @@ class SessionController extends Controller
             return $session;
         });
 
-        return new GameSessionResource($session->load('teams.players', 'currentStep'));
+        return response()->json([
+            'data' => $this->withCorrectAnswer($session->load('teams.players', 'currentStep'), $request),
+        ]);
     }
 
     /**
@@ -72,7 +74,7 @@ class SessionController extends Controller
             ->first();
 
         return response()->json([
-            'data' => $session ? new GameSessionResource($session) : null,
+            'data' => $session ? $this->withCorrectAnswer($session, $request) : null,
         ]);
     }
 
@@ -99,7 +101,9 @@ class SessionController extends Controller
             $session = $session->fresh(['teams.players', 'currentStep']);
             event(new StepAdvanced($session));
 
-            return new GameSessionResource($session);
+            return response()->json([
+                'data' => $this->withCorrectAnswer($session, $request),
+            ]);
         }
 
         DB::transaction(function () use ($session, $nextStep) {
@@ -135,7 +139,23 @@ class SessionController extends Controller
         $session = $session->fresh(['teams.players', 'currentStep']);
         event(new StepAdvanced($session));
 
-        return new GameSessionResource($session);
+        return response()->json([
+            'data' => $this->withCorrectAnswer($session, $request),
+        ]);
+    }
+
+    /**
+     * GameSessionResource is shared with the public player route and with
+     * broadcasts sent over a channel players also listen on, so it can
+     * never carry the answer. This bolts it onto the plain array only for
+     * these admin-authenticated, request-scoped controller responses.
+     */
+    private function withCorrectAnswer(GameSession $session, Request $request): array
+    {
+        $data = (new GameSessionResource($session))->resolve($request);
+        $data['current_step_correct_answer'] = $session->currentStep?->correct_answer;
+
+        return $data;
     }
 
     /**

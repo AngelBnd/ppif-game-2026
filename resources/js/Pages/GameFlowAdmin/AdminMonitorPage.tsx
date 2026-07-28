@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { getXsrfToken } from '@/utils/csrf';
+import { useEffect, useMemo, useState } from 'react';
 import AdminLoginPage from './AdminLoginPage';
 
 type OverviewSession = {
@@ -28,11 +28,13 @@ const REFRESH_INTERVAL_MS = 10000;
 const STATUS_META: Record<string, { label: string; className: string }> = {
     waiting: {
         label: 'Menunggu',
-        className: 'bg-amber-400/15 text-amber-300 ring-1 ring-inset ring-amber-400/30',
+        className:
+            'bg-amber-400/15 text-amber-300 ring-1 ring-inset ring-amber-400/30',
     },
     active: {
         label: 'Aktif',
-        className: 'bg-emerald-400/15 text-emerald-300 ring-1 ring-inset ring-emerald-400/30',
+        className:
+            'bg-emerald-400/15 text-emerald-300 ring-1 ring-inset ring-emerald-400/30',
     },
     finished: {
         label: 'Selesai',
@@ -80,7 +82,9 @@ export default function AdminMonitorPage() {
     const [error, setError] = useState('');
     const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
     const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
-    const [statusFilter, setStatusFilter] = useState<'all' | 'waiting' | 'active' | 'finished'>('all');
+    const [statusFilter, setStatusFilter] = useState<
+        'all' | 'waiting' | 'active' | 'finished'
+    >('all');
     const [search, setSearch] = useState('');
     // Two-click delete: first click arms it, second click (within 4s)
     // confirms - avoids a jarring native confirm() popup for a destructive action.
@@ -139,7 +143,8 @@ export default function AdminMonitorPage() {
         const query = search.trim().toLowerCase();
 
         return sessions.filter((s) => {
-            if (statusFilter !== 'all' && s.status !== statusFilter) return false;
+            if (statusFilter !== 'all' && s.status !== statusFilter)
+                return false;
             if (!query) return true;
 
             return (
@@ -154,7 +159,9 @@ export default function AdminMonitorPage() {
         if (confirmingCode !== code) {
             setConfirmingCode(code);
             setTimeout(() => {
-                setConfirmingCode((current) => (current === code ? null : current));
+                setConfirmingCode((current) =>
+                    current === code ? null : current,
+                );
             }, 4000);
             return;
         }
@@ -230,8 +237,16 @@ export default function AdminMonitorPage() {
                 {/* Summary stat cards */}
                 <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
                     <StatCard label="Total Sesi" value={counts.all} />
-                    <StatCard label="Aktif" value={counts.active} accent="text-emerald-300" />
-                    <StatCard label="Menunggu" value={counts.waiting} accent="text-amber-300" />
+                    <StatCard
+                        label="Aktif"
+                        value={counts.active}
+                        accent="text-emerald-300"
+                    />
+                    <StatCard
+                        label="Menunggu"
+                        value={counts.waiting}
+                        accent="text-amber-300"
+                    />
                     <StatCard label="Total Tim" value={totalTeams} />
                 </div>
 
@@ -250,7 +265,14 @@ export default function AdminMonitorPage() {
                             />
 
                             <div className="flex gap-1 rounded-lg bg-white/5 p-1">
-                                {(['all', 'waiting', 'active', 'finished'] as const).map((key) => (
+                                {(
+                                    [
+                                        'all',
+                                        'waiting',
+                                        'active',
+                                        'finished',
+                                    ] as const
+                                ).map((key) => (
                                     <button
                                         key={key}
                                         onClick={() => setStatusFilter(key)}
@@ -260,7 +282,10 @@ export default function AdminMonitorPage() {
                                                 : 'text-white/60 hover:text-white'
                                         }`}
                                     >
-                                        {key === 'all' ? 'Semua' : STATUS_META[key].label} ({counts[key]})
+                                        {key === 'all'
+                                            ? 'Semua'
+                                            : STATUS_META[key].label}{' '}
+                                        ({counts[key]})
                                     </button>
                                 ))}
                             </div>
@@ -273,7 +298,9 @@ export default function AdminMonitorPage() {
                         </div>
                     ) : visibleSessions.length === 0 ? (
                         <div className="rounded-xl border border-white/10 bg-white/[0.03] py-16 text-center text-white/40">
-                            {sessions.length === 0 ? 'Belum ada sesi.' : 'Tidak ada sesi yang cocok.'}
+                            {sessions.length === 0
+                                ? 'Belum ada sesi.'
+                                : 'Tidak ada sesi yang cocok.'}
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -300,7 +327,9 @@ export default function AdminMonitorPage() {
                                     </div>
 
                                     <div className="mb-3 rounded-lg bg-black/30 px-3 py-2 text-sm">
-                                        <span className="text-white/40">Step: </span>
+                                        <span className="text-white/40">
+                                            Step:{' '}
+                                        </span>
                                         {s.current_step ?? '-'}
                                     </div>
 
@@ -310,7 +339,9 @@ export default function AdminMonitorPage() {
                                                 key={i}
                                                 className="flex items-center justify-between rounded-md bg-white/5 px-3 py-1.5 text-sm"
                                             >
-                                                <span className="truncate text-white/80">{t.name}</span>
+                                                <span className="truncate text-white/80">
+                                                    {t.name}
+                                                </span>
                                                 <span className="font-semibold text-[#FFFE25]">
                                                     {t.score} pts
                                                 </span>
@@ -319,7 +350,9 @@ export default function AdminMonitorPage() {
                                     </div>
 
                                     <button
-                                        onClick={() => handleDeleteClick(s.code)}
+                                        onClick={() =>
+                                            handleDeleteClick(s.code)
+                                        }
                                         disabled={deletingCode === s.code}
                                         className={`w-full rounded-lg py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
                                             confirmingCode === s.code
@@ -341,7 +374,9 @@ export default function AdminMonitorPage() {
 
                 {/* Leaderboard */}
                 <section>
-                    <h2 className="mb-4 font-arsenal text-xl font-bold">Leaderboard</h2>
+                    <h2 className="mb-4 font-arsenal text-xl font-bold">
+                        Leaderboard
+                    </h2>
                     <div className="overflow-x-auto rounded-xl border border-white/10 bg-white/[0.03]">
                         <table className="w-full min-w-[600px] border-collapse text-left text-sm">
                             <thead>
@@ -351,7 +386,9 @@ export default function AdminMonitorPage() {
                                     <th className="py-3 pr-4">Tim</th>
                                     <th className="py-3 pr-4">Skor</th>
                                     <th className="py-3 pr-4">Benar/Total</th>
-                                    <th className="py-3 pr-4">Total Waktu Jawab</th>
+                                    <th className="py-3 pr-4">
+                                        Total Waktu Jawab
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -363,22 +400,34 @@ export default function AdminMonitorPage() {
                                         <td className="py-3 pl-4 pr-4 text-white/50">
                                             {MEDALS[i] ?? i + 1}
                                         </td>
-                                        <td className="py-3 pr-4 text-white/70">{row.class_name ?? '-'}</td>
-                                        <td className="py-3 pr-4 font-medium">{row.team_name}</td>
+                                        <td className="py-3 pr-4 text-white/70">
+                                            {row.class_name ?? '-'}
+                                        </td>
+                                        <td className="py-3 pr-4 font-medium">
+                                            {row.team_name}
+                                        </td>
                                         <td className="py-3 pr-4 font-semibold text-[#FFFE25]">
                                             {row.score}
                                         </td>
                                         <td className="py-3 pr-4 text-white/70">
-                                            {row.correct_answers}/{row.total_answers}
+                                            {row.correct_answers}/
+                                            {row.total_answers}
                                         </td>
                                         <td className="py-3 pr-4 text-white/70">
-                                            {(row.total_response_time_ms / 1000).toFixed(1)}s
+                                            {(
+                                                row.total_response_time_ms /
+                                                1000
+                                            ).toFixed(1)}
+                                            s
                                         </td>
                                     </tr>
                                 ))}
                                 {leaderboard.length === 0 && (
                                     <tr>
-                                        <td colSpan={6} className="py-10 text-center text-white/40">
+                                        <td
+                                            colSpan={6}
+                                            className="py-10 text-center text-white/40"
+                                        >
                                             Belum ada data.
                                         </td>
                                     </tr>
@@ -403,8 +452,12 @@ function StatCard({
 }) {
     return (
         <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-            <p className="text-xs uppercase tracking-wide text-white/40">{label}</p>
-            <p className={`mt-1 font-arsenal text-2xl font-bold ${accent}`}>{value}</p>
+            <p className="text-xs uppercase tracking-wide text-white/40">
+                {label}
+            </p>
+            <p className={`mt-1 font-arsenal text-2xl font-bold ${accent}`}>
+                {value}
+            </p>
         </div>
     );
 }

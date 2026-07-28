@@ -129,13 +129,13 @@ const DialogueBox = forwardRef<HTMLDivElement, DialogueBoxProps>(
             <div className={`${className}`} ref={ref}>
                 {/*ini dipakai buat ref yang eskternal*/}
                 <div ref={containerRef}>
-                    <div className="relative flex h-[480px] w-[1200px] justify-center">
+                    <div className="relative flex h-[300px] w-[1000px] justify-center">
                         <DialogueBox1
                             className={`w-[2400px] ${classNameSizeBox}`}
                         />
 
                         <div
-                            className={`absolute left-48 top-0 ${classNameIdentitySize}`}
+                            className={`absolute -top-28 left-12 ${classNameIdentitySize}`}
                         >
                             <DialogueName1 className="w-[360px]" />
 
@@ -155,9 +155,11 @@ const DialogueBox = forwardRef<HTMLDivElement, DialogueBoxProps>(
                         </div>
 
                         <div
-                            className={`absolute left-80 top-40 z-20 flex h-[200px] w-[700px] items-center font-arsenal text-4xl font-bold text-[#F0F2F5] ${classNameText}`}
+                            className={`absolute left-48 top-10 z-20 flex h-[200px] w-[700px] items-center font-arsenal text-4xl font-bold text-[#F0F2F5] ${classNameText}`}
                         >
-                            <div className="w-full">{msg}</div>
+                            <div className="w-full font-arsenal font-bold">
+                                {msg}
+                            </div>
                         </div>
                     </div>
                 </div>
