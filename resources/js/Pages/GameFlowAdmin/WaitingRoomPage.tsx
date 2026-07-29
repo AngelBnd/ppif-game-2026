@@ -254,7 +254,7 @@ export default function WaitingRoompage({ session, goNext }: Props) {
                             className="block h-auto w-full"
                         />
 
-                        <span className="absolute bottom-[16%] left-[27%] w-[9vw] -rotate-[8deg] font-noto text-[3vw] font-bold leading-none text-[#0A0C0F]">
+                        <span className="absolute bottom-[8%] left-[22%] w-[9vw] -rotate-[8deg] font-noto text-[3vw] font-bold leading-none text-[#0A0C0F]">
                             {rightTeam?.name}{' '}
                         </span>
                     </div>

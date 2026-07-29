@@ -69,7 +69,7 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
             phase !== prevPhaseRef.current
         ) {
             setPhaseBanner(phase);
-            const timeout = setTimeout(() => setPhaseBanner(null), 1500);
+            const timeout = setTimeout(() => setPhaseBanner(null), 5000);
             prevPhaseRef.current = phase;
             return () => clearTimeout(timeout);
         }
@@ -397,11 +397,18 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
                 {phaseBanner !== null && !isFinished && (
                     <div
                         ref={phaseBannerRef}
-                        className="pointer-events-none absolute inset-x-0 top-[30%] z-[55] flex justify-center"
+                        className="pointer-events-none absolute inset-0 z-[70] flex justify-center"
                     >
-                        <p className="rounded bg-black/70 px-6 py-2 font-arsenal text-3xl font-bold text-[#FFFE25]">
-                            PHASE {phaseBanner}
-                        </p>
+                        <div className="absolute inset-0 z-20 h-screen w-screen bg-[#0A0C0F] opacity-60" />
+                        <div className="absolute top-1/2 z-50 flex -translate-y-1/2 flex-col gap-3">
+                            <p className="relative text-6xl font-bold text-red-400">
+                                PHASE {phaseBanner}
+                            </p>
+                            <p className="= relative rounded">
+                                Ini masih placeholder, nanti bakal ada animasi
+                                yang berjalan 5 detik ya
+                            </p>
+                        </div>
                     </div>
                 )}
 
@@ -442,7 +449,7 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
                 {isFinished && (
                     <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/85 px-8 text-center">
                         <p className="font-arsenal text-2xl font-bold text-white">
-                            The boss was too strong...
+                            Puppet codie tidak bisa dikalahkan....
                         </p>
                     </div>
                 )}

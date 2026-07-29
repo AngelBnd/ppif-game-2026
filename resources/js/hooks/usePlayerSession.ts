@@ -168,6 +168,34 @@ export function usePlayerSession() {
         }
     }, []);
 
+    // Quitting of the player's own accord - best-effort removes their
+    // Player row server-side (freeing their slot), then always clears local
+    // state regardless of whether that request succeeded, so they can get
+    // back to the join screen even if the network call fails.
+    const leaveSession = useCallback(async () => {
+        const code = session?.code;
+        const token = deviceToken;
+
+        safeRemoveItem(CODE_KEY);
+        safeRemoveItem(TOKEN_KEY);
+        safeRemoveItem(TEAM_KEY);
+        setDeviceToken(null);
+        setTeam(null);
+        setSession(null);
+
+        if (!code || !token) return;
+
+        try {
+            await fetch(`/api/game-sessions/${code}/leave`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ device_token: token }),
+            });
+        } catch {
+            // Client-side state is already cleared regardless.
+        }
+    }, [session?.code, deviceToken]);
+
     const submitAnswer = useCallback(
         async (answerText: string) => {
             if (!session || !deviceToken) throw new Error('Not joined to a session');
@@ -226,6 +254,7 @@ export function usePlayerSession() {
         error,
         peekSession,
         joinSession,
+        leaveSession,
         submitAnswer,
         submitBossTap,
     };
