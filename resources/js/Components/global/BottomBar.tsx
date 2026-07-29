@@ -1,6 +1,6 @@
 export default function BottomFrame() {
     return (
-        <div className="pointer-events-none fixed -bottom-8 left-0 block w-full overflow-hidden">
+        <div className="pointer-events-none fixed -bottom-8 left-0 z-0 block w-full overflow-hidden">
             <div className="bottomFrame-video-mask bg-[#0A0C0F]">
                 <video
                     autoPlay

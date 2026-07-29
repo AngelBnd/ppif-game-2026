@@ -1,3 +1,4 @@
+import ChatCodieBubble from '@/Components/global/ChatCodieBubble';
 import { TeamHP } from '@/Components/monitor/TeamHP';
 import Bosshealth from '@/assets/monitor/Bosshealth.svg?react';
 import Codie from '@/assets/monitor/CODDDIE.svg?react';
@@ -7,7 +8,6 @@ import Bullets from '@/assets/monitor/bullets.svg?react';
 import Taptap from '@/assets/monitor/taptap.svg?react';
 import Thing from '@/assets/monitor/things.svg?react';
 import Streak from '@/assets/phone/STREAKBG.svg?react';
-import ChatCodie from '@/assets/svgs/CHATCODIE.svg?react';
 import LightingStrike from '@/assets/svgs/LIGHTINGSTRIKE.svg?react';
 import Tapmanajaa from '@/assets/svgs/tapmanajaa.svg?react';
 import type { BossTapResult, SessionInfo } from '@/types/gameSession';
@@ -416,24 +416,19 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
                         >
                             <LightingStrike className="block h-auto w-full" />
                         </div>
-                        <div
+                        <ChatCodieBubble
                             ref={introChatCodie1Ref}
-                            className="relative -ml-3"
-                        >
-                            <ChatCodie className="block h-auto w-[25rem]" />
-                            <h1 className="absolute right-6 top-10 h-[4rem] w-[13.5rem] text-start font-arsenal text-2xl font-bold leading-tight text-[#F0F2F5]">
-                                {' '}
-                                TAP LAYAR SECEPAT MUNGKIN!
-                            </h1>
-                        </div>
+                            className="-ml-3"
+                            textClassName="top-10 h-[4rem] text-2xl"
+                            text="TAP LAYAR SECEPAT MUNGKIN!"
+                        />
 
-                        <div ref={introChatCodie2Ref} className="relative ml-4">
-                            <ChatCodie className="block h-auto w-[25rem]" />
-                            <h1 className="absolute right-6 top-12 h-[4rem] w-[13.5rem] text-start font-arsenal text-lg font-bold leading-tight text-[#F0F2F5]">
-                                {' '}
-                                Semua anggota tim dapat ikut untuk membantu!
-                            </h1>
-                        </div>
+                        <ChatCodieBubble
+                            ref={introChatCodie2Ref}
+                            className="ml-4"
+                            textClassName="top-12 h-[4rem] text-lg"
+                            text="Semua anggota tim dapat ikut untuk membantu!"
+                        />
 
                         <div
                             ref={introTapmanajaaRef}

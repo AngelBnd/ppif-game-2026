@@ -1,8 +1,7 @@
 import Button from '@/Components/global/Button';
+import ConfirmPopup from '@/Components/global/ConfirmPopup';
 import NextButton from '@/assets/icons/NextButtonSVG.svg?react';
-import Holdup from '@/assets/svgs/Holdup.svg';
-import PopupBox from '@/assets/svgs/PopupBox.svg';
-import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { useAdminAuth, type AdminUser } from '@/hooks/useAdminAuth';
 import { useAdminSession } from '@/hooks/useAdminSession';
 import { useSteps } from '@/hooks/useSteps';
 import { useEffect, useState } from 'react';
@@ -14,7 +13,19 @@ import BossFightPage from './BossFightPage';
 import StorylinePage from './StorylinePage';
 import WaitingRoompage from './WaitingRoompage';
 
-const GROUP_PAIR_PATTERN = /^\s*\d+\s*\/\s*\d+\s*$/;
+// PIC accounts are seeded with both their name ("PIC Kelompok 9/10") and
+// email (iniAkunBuatKel9.10@gmail.com) encoding which two groups they run -
+// pull the pair from whichever's available instead of making them type it
+// in by hand, which was just an opportunity to fat-finger the wrong groups.
+function groupPairFromAccount(user: AdminUser): string | null {
+    const emailMatch = user.email.match(/(\d+)\s*\.\s*(\d+)@/);
+    if (emailMatch) return `${emailMatch[1]}/${emailMatch[2]}`;
+
+    const nameMatch = user.name.match(/(\d+)\s*\/\s*(\d+)/);
+    if (nameMatch) return `${nameMatch[1]}/${nameMatch[2]}`;
+
+    return null;
+}
 
 export default function AdminFlowPage() {
     const { stepId } = useParams();
@@ -29,7 +40,6 @@ export default function AdminFlowPage() {
         advanceSession,
     } = useAdminSession(!!user && !user.is_admin);
 
-    const [groupInput, setGroupInput] = useState('');
     const [showNextConfirm, setShowNextConfirm] = useState(false);
 
     // The monitoring-only admin account doesn't run a room - send it
@@ -69,7 +79,7 @@ export default function AdminFlowPage() {
     }
 
     if (!session) {
-        const isValid = GROUP_PAIR_PATTERN.test(groupInput);
+        const groupPair = groupPairFromAccount(user);
 
         return (
             <main className="flex min-h-screen items-center justify-center bg-black text-white">
@@ -77,27 +87,25 @@ export default function AdminFlowPage() {
                     className="flex w-full max-w-xs flex-col gap-4 text-center"
                     onSubmit={(e) => {
                         e.preventDefault();
-                        if (isValid) createSession(groupInput.trim());
+                        if (groupPair) createSession(groupPair);
                     }}
                 >
-                    <p className="text-sm text-white/60">
-                        Login sebagai {user.name}
+                    <p className="text-2xl font-bold text-white">
+                        Anda akan Login sebagai {user.name}
                     </p>
-                    <label htmlFor="group-pair" className="text-lg font-bold">
-                        Nomor Kelompok (contoh: 1/2)
-                    </label>
-                    <input
-                        id="group-pair"
-                        type="text"
-                        value={groupInput}
-                        onChange={(e) => setGroupInput(e.target.value)}
-                        placeholder="1/2"
-                        className="rounded-xl px-4 py-3 text-center text-black"
-                        disabled={isSessionLoading}
-                    />
+
+                    {groupPair ? (
+                        <p> Apakah anda yakin untuk membuat sesinya?</p>
+                    ) : (
+                        <p className="text-sm text-red-400">
+                            Akun ini tidak terhubung ke nomor kelompok manapun -
+                            hubungi admin.
+                        </p>
+                    )}
+
                     <button
                         type="submit"
-                        disabled={!isValid || isSessionLoading}
+                        disabled={!groupPair || isSessionLoading}
                         className="rounded-xl bg-white px-6 py-3 text-black disabled:opacity-40"
                     >
                         {isSessionLoading ? 'Membuat sesi...' : 'Mulai Sesi'}
@@ -105,10 +113,15 @@ export default function AdminFlowPage() {
                     <button
                         type="button"
                         onClick={logout}
-                        className="text-xs text-white/40 underline"
+                        className="mb-12 text-sm text-white/40 underline"
                     >
                         Logout
                     </button>
+
+                    <p className="-mb-4 text-xs text-white/20">
+                        Semangat para modul!
+                    </p>
+                    <p className="text-xs text-white/20">- Interface</p>
                 </form>
             </main>
         );
@@ -163,39 +176,18 @@ export default function AdminFlowPage() {
             )}
 
             {showNextConfirm && (
-                <div className="animate-fade-in fixed inset-0 z-[100] flex items-center justify-center bg-black/70">
-                    <div className="animate-pop-in relative h-[25rem] w-[30rem]">
-                        <img
-                            className="absolute z-40 ml-4 block h-auto w-[20rem]"
-                            src={Holdup}
-                        />
-                        <img className="relative mt-16" src={PopupBox} />
-
-                        <div className="absolute left-1/2 top-44 flex -translate-x-1/2 flex-col gap-10">
-                            <div className="z-50 w-[25rem] text-center font-arsenal text-3xl font-bold">
-                                Apakah anda benar-benar yakin buat melanjutkan
-                                sesi?
-                            </div>
-
-                            <div className="flex justify-center gap-20 font-noto font-bold">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowNextConfirm(false)}
-                                    className="text-4xl transition-transform duration-150 hover:scale-110 active:scale-95"
-                                >
-                                    TIDAK
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={confirmNext}
-                                    className="text-4xl transition-transform duration-150 hover:scale-110 active:scale-95"
-                                >
-                                    IYA!!!
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <ConfirmPopup
+                    message="Apakah anda benar-benar yakin buat melanjutkan sesi?"
+                    onCancel={() => setShowNextConfirm(false)}
+                    onConfirm={confirmNext}
+                    boxClassName="h-[25rem] w-[30rem]"
+                    holdupClassName="ml-4 w-[20rem]"
+                    popupBoxClassName="mt-16"
+                    contentClassName="top-44 gap-10"
+                    messageClassName="w-[25rem] text-3xl"
+                    buttonsClassName="gap-20"
+                    buttonClassName="text-4xl"
+                />
             )}
 
             {step.type === 'waiting' && (

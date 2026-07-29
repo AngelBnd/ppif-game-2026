@@ -26,6 +26,7 @@ class GameSessionController extends Controller
     {
         $validated = $request->validate([
             'team_id' => ['required', 'integer'],
+            'nickname' => ['required', 'string', 'max:255'],
         ]);
 
         $session = GameSession::where('code', $code)->firstOrFail();
@@ -45,6 +46,7 @@ class GameSessionController extends Controller
             );
 
             $player = $team->players()->create([
+                'nickname' => $validated['nickname'],
                 'device_token' => (string) Str::uuid(),
                 'joined_at' => now(),
             ]);
