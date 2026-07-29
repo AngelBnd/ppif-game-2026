@@ -412,18 +412,25 @@ export default function BossFightPage({ step, session }: Props) {
             {phaseBanner !== null && !isFinished && (
                 <div
                     ref={phaseBannerRef}
-                    className="pointer-events-none absolute inset-x-0 top-[35%] z-[65] flex justify-center"
+                    className="pointer-events-none absolute inset-0 z-[70] flex justify-center"
                 >
-                    <p className="rounded bg-black/70 px-10 py-3 font-arsenal text-6xl font-bold text-[#FFFE25]">
-                        PHASE {phaseBanner} Ini masih placeholder
-                    </p>
+                    <div className="absolute inset-0 z-20 h-screen w-screen bg-[#0A0C0F] opacity-60" />
+                    <div className="absolute top-1/2 z-50 flex -translate-y-1/2 flex-col gap-3">
+                        <p className="relative text-6xl font-bold text-red-400">
+                            PHASE {phaseBanner}
+                        </p>
+                        <p className="= relative rounded">
+                            Ini masih placeholder, nanti bakal ada animasi yang
+                            berjalan 5 detik ya
+                        </p>
+                    </div>
                 </div>
             )}
 
             {isFinished && (
                 <div className="absolute inset-0 z-[45] flex items-center justify-center bg-black/85 px-8 text-center">
                     <p className="font-arsenal text-4xl font-bold text-white">
-                        The boss was too strong...
+                        Puppet codie tidak bisa dikalahkan...
                     </p>
                 </div>
             )}
