@@ -15,6 +15,29 @@ use Illuminate\Support\Facades\DB;
 
 class SessionController extends Controller
 {
+    /**
+     * Group number -> its actual name, used when naming a session's teams.
+     */
+    private const GROUP_NAMES = [
+        1 => 'Stella', 2 => 'Nexus', 3 => 'Cosmo', 4 => 'Nebula',
+        5 => 'Petra', 6 => 'Sirius', 7 => 'Astreon', 8 => 'Draco',
+        9 => 'Lunar', 10 => 'Linus', 11 => 'Helios', 12 => 'Orion',
+        13 => 'Terra', 14 => 'Aster', 15 => 'Starla', 16 => 'Gamma',
+    ];
+
+    /**
+     * @return array{0: ?string, 1: string} [group number, group name] - number
+     * is null when no group number was given, in which case name is $fallback.
+     */
+    private function teamName(?string $groupNumber, string $fallback): array
+    {
+        if ($groupNumber === null) {
+            return [null, $fallback];
+        }
+
+        return [$groupNumber, self::GROUP_NAMES[(int) $groupNumber] ?? $fallback];
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -42,9 +65,12 @@ class SessionController extends Controller
                 'current_step_id' => $firstStep->id,
             ]);
 
+            [$number1, $name1] = $this->teamName($groupNumbers[0] ?? null, 'Kelompok A');
+            [$number2, $name2] = $this->teamName($groupNumbers[1] ?? null, 'Kelompok B');
+
             $session->teams()->createMany([
-                ['name' => $groupNumbers ? "Kelompok {$groupNumbers[0]}" : 'Kelompok A'],
-                ['name' => $groupNumbers ? "Kelompok {$groupNumbers[1]}" : 'Kelompok B'],
+                ['name' => $name1, 'number' => $number1 !== null ? (int) $number1 : null],
+                ['name' => $name2, 'number' => $number2 !== null ? (int) $number2 : null],
             ]);
 
             StepProgress::create([

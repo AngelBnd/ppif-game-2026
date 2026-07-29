@@ -33,6 +33,9 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
     const exclShapeRef = useRef<HTMLImageElement>(null);
     const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
     const optionsWaveTlRef = useRef<gsap.core.Timeline | null>(null);
+    const answeredCounterRef = useRef<HTMLDivElement>(null);
+    const dingRef = useRef<HTMLAudioElement>(null);
+    const tickingRef = useRef<HTMLAudioElement>(null);
     const [codieIntroDone, setCodieIntroDone] = useState(false);
     const [finish, setFinish] = useState(false);
 
@@ -204,10 +207,90 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
 
     useEffect(() => {
         if (correctIdx === -1) return;
-        if (!timeIsUp && answeredCount !== 2) return;
 
-        setFinish(true);
+        if (timeIsUp) {
+            setFinish(true);
+            return;
+        }
+
+        if (answeredCount === 2) {
+            // Give both teams a beat to see "2/2" land before dimming the
+            // wrong options and revealing the correct one.
+            const timeout = setTimeout(() => setFinish(true), 4000);
+            return () => clearTimeout(timeout);
+        }
     }, [timeIsUp, correctIdx, answeredCount]);
+
+    // Ticking clock plays for the duration of each question, stopping the
+    // moment it's resolved (time up, or both teams answered + the reveal
+    // delay above has elapsed).
+    useEffect(() => {
+        const audio = tickingRef.current;
+        if (!audio) return;
+
+        if (finish) {
+            audio.pause();
+            audio.currentTime = 0;
+            return;
+        }
+
+        audio.currentTime = 0;
+        audio.play().catch(() => {
+            // Autoplay can be blocked until the admin has interacted with
+            // the page at least once - nothing to do about it here.
+        });
+
+        return () => {
+            audio.pause();
+        };
+    }, [finish, step.slug]);
+
+    // One-shot "ding" the instant the answer gets revealed.
+    useEffect(() => {
+        if (!finish) return;
+
+        const audio = dingRef.current;
+        if (!audio) return;
+
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+    }, [finish]);
+
+    useEffect(() => {
+        const waitingForReveal = answeredCount === 2 && !finish;
+        if (!waitingForReveal || !hpRef.current) return;
+
+        const ctx = gsap.context(() => {
+            gsap.set(hpRef.current, {
+                transformOrigin: '50% 100%',
+            });
+
+            gsap.timeline({ repeat: -1, defaults: { ease: 'sine.inOut' } })
+                .to(hpRef.current, {
+                    y: -50,
+                    scaleX: 0.9,
+                    scaleY: 1.1,
+                    duration: 0.5,
+                    ease: 'power2.out',
+                })
+                .to(hpRef.current, {
+                    y: 0,
+                    scaleX: 1.15,
+                    scaleY: 0.85,
+                    duration: 0.22,
+                    ease: 'power2.in',
+                })
+                .to(hpRef.current, {
+                    scaleX: 1,
+                    scaleY: 1,
+                    duration: 0.35,
+                    ease: 'elastic.out(1, 0.5)',
+                })
+                .to(hpRef.current, {}, '+=0.2');
+        }, containerRef);
+
+        return () => ctx.revert();
+    }, [answeredCount, finish]);
 
     useEffect(() => {
         if (finish) {
@@ -244,6 +327,9 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
 
     return (
         <main className="pointer-events-none flex min-h-screen items-center justify-center overflow-hidden text-white">
+            <audio ref={tickingRef} src="/sounds/Ticking.mp3" loop />
+            <audio ref={dingRef} src="/sounds/DINGDING.wav" />
+
             <div className="absolute z-0 h-screen w-screen bg-[#7C131E] opacity-70" />
             <video
                 autoPlay
@@ -264,7 +350,10 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
                 >
                     <HP className="relative h-auto w-full" />
 
-                    <div className="absolute left-12 top-40 z-20 flex flex-col items-center leading-none">
+                    <div
+                        ref={answeredCounterRef}
+                        className="absolute left-4 top-40 z-20 flex flex-col items-center justify-center leading-none"
+                    >
                         <div className="flex items-center text-[56px] font-bold tracking-[-0.04em]">
                             <span className="text-[#73F9D9]">
                                 {answeredCount}
@@ -275,8 +364,8 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
                             <span className="text-[#F168DB]">2</span>
                         </div>
 
-                        <p className="mt-2 font-noto text-lg font-bold leading-none text-[#F0F2F5]">
-                            has answered
+                        <p className="bg mt-2 text-center font-noto text-lg font-bold leading-none text-[#F0F2F5]">
+                            teams has answered
                         </p>
                     </div>
                 </div>
@@ -374,10 +463,9 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
                                 };
 
                                 const isCorrectReveal =
-                                    timeIsUp && idx === correctIdx;
+                                    finish && idx === correctIdx;
                                 const isDimmedOut =
-                                    (timeIsUp || answeredCount === 2) &&
-                                    idx !== correctIdx;
+                                    finish && idx !== correctIdx;
 
                                 return (
                                     <button

@@ -103,7 +103,19 @@ export default function AnswerTheQuestionPage({
             const result = await onSubmit(option);
             setFeedback(result.is_correct ? 'Correct!' : 'Incorrect.');
             setStatus('submitted');
-        } catch {
+        } catch (err) {
+            const status = (err as Error & { status?: number }).status;
+
+            if (status === 409) {
+                // A teammate already submitted the team's answer for this
+                // question - retrying will never succeed, so lock instead
+                // of inviting another attempt.
+                setFeedback('Your team has already answered!');
+                setStatus('submitted');
+                setSelectedIdx(null);
+                return;
+            }
+
             setFeedback('Failed to submit, try again.');
             setStatus('error');
             setSelectedIdx(null);
@@ -125,7 +137,7 @@ export default function AnswerTheQuestionPage({
                     >
                         <Seconds className="block h-auto w-full" />
 
-                        <span className="absolute left-[40px] top-[40px] font-arsenal text-2xl font-bold text-[#FFFE25]">
+                        <span className="absolute left-[35px] top-[40px] font-arsenal text-2xl font-bold text-[#FFFE25]">
                             {remaining ?? step.time_limit_seconds ?? 60}
                         </span>
                     </div>
@@ -183,11 +195,12 @@ export default function AnswerTheQuestionPage({
                     })}
                 </div>
 
-                {feedback && (
+                {/* feedback dikasih di monitor aja(?) */}
+                {/* {feedback && (
                     <p className="mt-8 text-center text-lg font-bold text-white">
                         {feedback}
                     </p>
-                )}
+                )} */}
 
                 {timeIsUp && status === 'idle' && (
                     <p className="mt-8 text-center font-arsenal text-xl font-bold">

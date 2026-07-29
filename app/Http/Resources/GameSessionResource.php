@@ -37,10 +37,14 @@ class GameSessionResource extends JsonResource
                 return $this->teams->map(fn ($team) => [
                     'id' => $team->id,
                     'name' => $team->name,
+                    'number' => $team->number,
                     'score' => $team->score,
                     'hp' => $team->hp,
                     'players' => $team->relationLoaded('players')
-                        ? $team->players->map(fn ($player) => ['id' => $player->id])
+                        ? $team->players->map(fn ($player) => [
+                            'id' => $player->id,
+                            'nickname' => $player->nickname,
+                        ])
                         : [],
                 ]);
             }),

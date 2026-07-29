@@ -56,7 +56,7 @@ export default function PlayerFlowPage() {
     };
 
     const devNav = isDev && (
-        <div className="fixed bottom-2 left-1/2 z-[999] flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/80 px-3 py-2 font-mono text-xs text-white shadow-lg">
+        <div className="fixed bottom-12 left-1/2 z-[999] flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/80 px-3 py-2 font-mono text-xs text-white shadow-lg">
             <button
                 type="button"
                 disabled={!prevStep}
@@ -111,36 +111,38 @@ export default function PlayerFlowPage() {
 
     return (
         <div className="h-dvh w-screen overflow-hidden">
-            {devNav}
+            <div className="relative z-20 mx-auto h-dvh w-full max-w-[480px] translate-x-0 overflow-hidden">
+                {devNav}
 
-            {step.type === 'waiting' && (
-                <JoinRoomPage
-                    step={step}
-                    onPeek={peekSession}
-                    onJoin={joinSession}
-                />
-            )}
+                {step.type === 'waiting' && (
+                    <JoinRoomPage
+                        step={step}
+                        onPeek={peekSession}
+                        onJoin={joinSession}
+                    />
+                )}
 
-            {step.type === 'story' && <StorylinePage step={step} />}
+                {step.type === 'story' && <StorylinePage step={step} />}
 
-            {step.type === 'answer' && (
-                <AnswerTheQuestionPage
-                    step={step}
-                    session={session}
-                    onSubmit={submitAnswer}
-                />
-            )}
+                {step.type === 'answer' && (
+                    <AnswerTheQuestionPage
+                        step={step}
+                        session={session}
+                        onSubmit={submitAnswer}
+                    />
+                )}
 
-            {step.type === 'activity' && <ActivityPage step={step} />}
+                {step.type === 'activity' && <ActivityPage step={step} />}
 
-            {step.type === 'boss' && (
-                <BossFightPage
-                    step={step}
-                    session={session}
-                    team={team}
-                    onTap={submitBossTap}
-                />
-            )}
+                {step.type === 'boss' && (
+                    <BossFightPage
+                        step={step}
+                        session={session}
+                        team={team}
+                        onTap={submitBossTap}
+                    />
+                )}
+            </div>
         </div>
     );
 }
