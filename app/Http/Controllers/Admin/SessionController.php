@@ -15,6 +15,29 @@ use Illuminate\Support\Facades\DB;
 
 class SessionController extends Controller
 {
+    /**
+     * Group number -> its actual name, used when naming a session's teams.
+     */
+    private const GROUP_NAMES = [
+        1 => 'Stella', 2 => 'Nexus', 3 => 'Cosmo', 4 => 'Nebula',
+        5 => 'Petra', 6 => 'Sirius', 7 => 'Astreon', 8 => 'Draco',
+        9 => 'Lunar', 10 => 'Linus', 11 => 'Helios', 12 => 'Orion',
+        13 => 'Terra', 14 => 'Aster', 15 => 'Starla', 16 => 'Gamma',
+    ];
+
+    /**
+     * @return array{0: ?string, 1: string} [group number, group name] - number
+     * is null when no group number was given, in which case name is $fallback.
+     */
+    private function teamName(?string $groupNumber, string $fallback): array
+    {
+        if ($groupNumber === null) {
+            return [null, $fallback];
+        }
+
+        return [$groupNumber, self::GROUP_NAMES[(int) $groupNumber] ?? $fallback];
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -42,9 +65,12 @@ class SessionController extends Controller
                 'current_step_id' => $firstStep->id,
             ]);
 
+            [$number1, $name1] = $this->teamName($groupNumbers[0] ?? null, 'Kelompok A');
+            [$number2, $name2] = $this->teamName($groupNumbers[1] ?? null, 'Kelompok B');
+
             $session->teams()->createMany([
-                ['name' => $groupNumbers ? "Kelompok {$groupNumbers[0]}" : 'Kelompok A'],
-                ['name' => $groupNumbers ? "Kelompok {$groupNumbers[1]}" : 'Kelompok B'],
+                ['name' => $name1, 'number' => $number1 !== null ? (int) $number1 : null],
+                ['name' => $name2, 'number' => $number2 !== null ? (int) $number2 : null],
             ]);
 
             StepProgress::create([
@@ -56,7 +82,9 @@ class SessionController extends Controller
             return $session;
         });
 
-        return new GameSessionResource($session->load('teams.players', 'currentStep'));
+        return response()->json([
+            'data' => $this->withCorrectAnswer($session->load('teams.players', 'currentStep'), $request),
+        ]);
     }
 
     /**
@@ -72,7 +100,7 @@ class SessionController extends Controller
             ->first();
 
         return response()->json([
-            'data' => $session ? new GameSessionResource($session) : null,
+            'data' => $session ? $this->withCorrectAnswer($session, $request) : null,
         ]);
     }
 
@@ -99,7 +127,9 @@ class SessionController extends Controller
             $session = $session->fresh(['teams.players', 'currentStep']);
             event(new StepAdvanced($session));
 
-            return new GameSessionResource($session);
+            return response()->json([
+                'data' => $this->withCorrectAnswer($session, $request),
+            ]);
         }
 
         DB::transaction(function () use ($session, $nextStep) {
@@ -135,19 +165,42 @@ class SessionController extends Controller
         $session = $session->fresh(['teams.players', 'currentStep']);
         event(new StepAdvanced($session));
 
-        return new GameSessionResource($session);
+        return response()->json([
+            'data' => $this->withCorrectAnswer($session, $request),
+        ]);
     }
 
     /**
-     * Admin-only: delete a session (and, via cascade, its teams/players/
-     * answers/leaderboard rows) - lets the monitoring dashboard clear out
-     * leftover test rooms instead of them piling up forever.
+     * GameSessionResource is shared with the public player route and with
+     * broadcasts sent over a channel players also listen on, so it can
+     * never carry the answer. This bolts it onto the plain array only for
+     * these admin-authenticated, request-scoped controller responses.
+     */
+    private function withCorrectAnswer(GameSession $session, Request $request): array
+    {
+        $data = (new GameSessionResource($session))->resolve($request);
+        $data['current_step_correct_answer'] = $session->currentStep?->correct_answer;
+
+        return $data;
+    }
+
+    /**
+     * Delete a session (and, via cascade, its teams/players/answers/
+     * leaderboard rows) - restricted to the PIC who owns it (or the
+     * monitoring admin), lets a PIC wipe a session and start fresh instead
+     * of leftover test rooms piling up forever.
      */
     public function destroy(Request $request, string $code)
     {
-        abort_unless($request->user()->is_admin, 403);
+        $session = GameSession::where('code', $code)->firstOrFail();
 
-        GameSession::where('code', $code)->firstOrFail()->delete();
+        abort_unless(
+            $session->user_id === $request->user()->id || $request->user()->is_admin,
+            403,
+            'This is not your session.',
+        );
+
+        $session->delete();
 
         return response()->noContent();
     }

@@ -21,6 +21,7 @@ class GameSessionResource extends JsonResource
             'class_name' => $this->class_name,
             'status' => $this->status,
             'current_step' => $this->whenLoaded('currentStep'),
+            'current_step_started_at' => $this->currentStepProgress()?->activated_at,
             'started_at' => $this->started_at,
             'finished_at' => $this->finished_at,
             'answered_count' => $this->when(
@@ -36,10 +37,14 @@ class GameSessionResource extends JsonResource
                 return $this->teams->map(fn ($team) => [
                     'id' => $team->id,
                     'name' => $team->name,
+                    'number' => $team->number,
                     'score' => $team->score,
                     'hp' => $team->hp,
                     'players' => $team->relationLoaded('players')
-                        ? $team->players->map(fn ($player) => ['id' => $player->id])
+                        ? $team->players->map(fn ($player) => [
+                            'id' => $player->id,
+                            'nickname' => $player->nickname,
+                        ])
                         : [],
                 ]);
             }),

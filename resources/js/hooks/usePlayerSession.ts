@@ -8,14 +8,50 @@ const TEAM_KEY = 'ppif_player_team';
 
 type OwnTeam = { id: number; name: string };
 
+// localStorage can throw instead of just being unavailable - Safari private
+// browsing on older versions, and some in-app browsers (Instagram/TikTok/
+// WhatsApp's embedded WebKit views) restrict or block it outright. Since two
+// of these run inside a useState initializer during the very first render,
+// an uncaught throw there blanks the whole page with no error boundary to
+// catch it. These wrappers degrade to "session won't survive a reload"
+// instead of crashing.
+function safeGetItem(key: string): string | null {
+    try {
+        return localStorage.getItem(key);
+    } catch {
+        return null;
+    }
+}
+
+function safeSetItem(key: string, value: string): void {
+    try {
+        localStorage.setItem(key, value);
+    } catch {
+        // Nothing else depends on this succeeding.
+    }
+}
+
+function safeRemoveItem(key: string): void {
+    try {
+        localStorage.removeItem(key);
+    } catch {
+        // Nothing else depends on this succeeding.
+    }
+}
+
 export function usePlayerSession() {
     const [session, setSession] = useState<SessionInfo | null>(null);
     const [deviceToken, setDeviceToken] = useState<string | null>(() =>
-        localStorage.getItem(TOKEN_KEY),
+        safeGetItem(TOKEN_KEY),
     );
     const [team, setTeam] = useState<OwnTeam | null>(() => {
-        const raw = localStorage.getItem(TEAM_KEY);
-        return raw ? (JSON.parse(raw) as OwnTeam) : null;
+        const raw = safeGetItem(TEAM_KEY);
+        if (!raw) return null;
+        try {
+            return JSON.parse(raw) as OwnTeam;
+        } catch {
+            return null;
+        }
     });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -55,14 +91,14 @@ export function usePlayerSession() {
     }, []);
 
     useEffect(() => {
-        const savedCode = localStorage.getItem(CODE_KEY);
+        const savedCode = safeGetItem(CODE_KEY);
         if (!savedCode) return;
 
         setIsLoading(true);
         fetchByCode(savedCode)
             .catch(() => {
-                localStorage.removeItem(CODE_KEY);
-                localStorage.removeItem(TOKEN_KEY);
+                safeRemoveItem(CODE_KEY);
+                safeRemoveItem(TOKEN_KEY);
                 setDeviceToken(null);
             })
             .finally(() => setIsLoading(false));
@@ -101,7 +137,7 @@ export function usePlayerSession() {
         };
     }, [session?.code, applyBossTapResult]);
 
-    const joinSession = useCallback(async (code: string, teamId: number) => {
+    const joinSession = useCallback(async (code: string, teamId: number, nickname: string) => {
         setIsLoading(true);
         setError(null);
 
@@ -109,16 +145,16 @@ export function usePlayerSession() {
             const res = await fetch(`/api/game-sessions/${code}/join`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ team_id: teamId }),
+                body: JSON.stringify({ team_id: teamId, nickname }),
             });
 
             const body = await res.json();
 
             if (!res.ok) throw new Error(body.message ?? 'Failed to join session');
 
-            localStorage.setItem(CODE_KEY, code);
-            localStorage.setItem(TOKEN_KEY, body.device_token);
-            localStorage.setItem(TEAM_KEY, JSON.stringify(body.team));
+            safeSetItem(CODE_KEY, code);
+            safeSetItem(TOKEN_KEY, body.device_token);
+            safeSetItem(TEAM_KEY, JSON.stringify(body.team));
             setDeviceToken(body.device_token);
             setTeam(body.team);
             setSession(body.game_session);
@@ -131,6 +167,34 @@ export function usePlayerSession() {
             setIsLoading(false);
         }
     }, []);
+
+    // Quitting of the player's own accord - best-effort removes their
+    // Player row server-side (freeing their slot), then always clears local
+    // state regardless of whether that request succeeded, so they can get
+    // back to the join screen even if the network call fails.
+    const leaveSession = useCallback(async () => {
+        const code = session?.code;
+        const token = deviceToken;
+
+        safeRemoveItem(CODE_KEY);
+        safeRemoveItem(TOKEN_KEY);
+        safeRemoveItem(TEAM_KEY);
+        setDeviceToken(null);
+        setTeam(null);
+        setSession(null);
+
+        if (!code || !token) return;
+
+        try {
+            await fetch(`/api/game-sessions/${code}/leave`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ device_token: token }),
+            });
+        } catch {
+            // Client-side state is already cleared regardless.
+        }
+    }, [session?.code, deviceToken]);
 
     const submitAnswer = useCallback(
         async (answerText: string) => {
@@ -147,7 +211,11 @@ export function usePlayerSession() {
 
             const body = await res.json();
 
-            if (!res.ok) throw new Error(body.message ?? 'Failed to submit answer');
+            if (!res.ok) {
+                const err = new Error(body.message ?? 'Failed to submit answer');
+                (err as Error & { status?: number }).status = res.status;
+                throw err;
+            }
 
             return body as { is_correct: boolean; response_time_ms: number };
         },
@@ -186,6 +254,7 @@ export function usePlayerSession() {
         error,
         peekSession,
         joinSession,
+        leaveSession,
         submitAnswer,
         submitBossTap,
     };

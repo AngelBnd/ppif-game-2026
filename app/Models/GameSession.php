@@ -16,7 +16,7 @@ class GameSession extends Model
      * triggers the scripted "impossible to win" cutscene instead of a
      * normal phase transition. Placeholder numbers - tune freely.
      */
-    public const BOSS_PHASE_MAX_HP = [1 => 300, 2 => 300, 3 => 300];
+    public const BOSS_PHASE_MAX_HP = [1 => 10, 2 => 180, 3 => 300];
 
     public const BOSS_PHASE3_CUTSCENE_THRESHOLD = 15;
 
@@ -72,5 +72,23 @@ class GameSession extends Model
     public function stepProgress(): HasMany
     {
         return $this->hasMany(StepProgress::class);
+    }
+
+    /**
+     * The still-active step_progress row for whatever step is current -
+     * its activated_at is the shared clock every client's countdown is
+     * computed from, instead of each device timing its own local 60s.
+     */
+    public function currentStepProgress(): ?StepProgress
+    {
+        if (! $this->current_step_id) {
+            return null;
+        }
+
+        return $this->stepProgress()
+            ->where('step_id', $this->current_step_id)
+            ->whereNull('deactivated_at')
+            ->latest('activated_at')
+            ->first();
     }
 }

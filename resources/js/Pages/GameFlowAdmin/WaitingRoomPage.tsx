@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
-import type { Step } from '@/types/step';
+import ConfirmPopup from '@/Components/global/ConfirmPopup';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 import type { SessionInfo } from '@/types/gameSession';
+import type { Step } from '@/types/step';
+import { useEffect, useState } from 'react';
 
 type Props = {
     step: Step;
@@ -10,20 +12,17 @@ type Props = {
 
 export default function WaitingRoompage({ session, goNext }: Props) {
     const pin = session?.code ?? '';
+    const { user, isLoading: isAuthLoading, login, logout } = useAdminAuth();
     const maxPlayers = session?.max_players_per_team ?? 3;
     const leftTeam = session?.teams[0];
     const rightTeam = session?.teams[1];
     const leftCount = leftTeam?.players.length ?? 0;
     const rightCount = rightTeam?.players.length ?? 0;
-    // Flag art only has 3 states (0/1/2) - reuse it as "how many sides have
-    // at least one player in" rather than a literal head count.
-    const flagIndex = Math.min(
-        (leftCount >= 1 ? 1 : 0) + (rightCount >= 1 ? 1 : 0),
-        2,
-    );
+    const flagIndex = leftCount + rightCount;
     const [pressState, setPressState] = useState<'idle' | 'hover' | 'press'>(
         'idle',
     );
+    const [showStartConfirm, setShowStartConfirm] = useState(false);
     const [isPortrait, setIsPortrait] = useState(() => {
         if (typeof window === 'undefined') return false;
         return (
@@ -97,13 +96,20 @@ export default function WaitingRoompage({ session, goNext }: Props) {
     }
 
     return (
-        <div className="relative z-0 min-h-screen w-full overflow-hidden bg-surface-gradient">
+        <div className="bg-surface-gradient relative z-0 min-h-screen w-full overflow-hidden">
+            <button
+                className="fixed bottom-36 left-4 z-50 h-8 w-[4rem] font-arsenal text-gray-600 underline"
+                onClick={logout}
+            >
+                Log out
+            </button>
+
             {/*  BACKGROUND LAYER */}
             <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 select-none"
             >
-                <div className="z-0 h-screen w-screen bg-[#0A0C0F]" />
+                <div className="z-0 h-screen w-screen" />
 
                 {/* 1. vector — paling belakang */}
                 <div className="z-1 absolute inset-0 bg-[url('/starting-page/vector-99.svg')] bg-[length:auto_100%] bg-right bg-no-repeat" />
@@ -116,11 +122,24 @@ export default function WaitingRoompage({ session, goNext }: Props) {
                 />
 
                 {/* 3. flag*/}
-                <img
-                    src={`/starting-page/${flagIndex}-2hasjoined.svg`}
-                    alt=""
-                    className="absolute left-[30%] top-[-2.1%] z-[4] h-auto w-[75%]"
-                />
+                <div className="absolute left-[30%] top-[-2.1%] z-[4] w-[55%]">
+                    <img
+                        src="/starting-page/FlagBG.svg"
+                        alt=""
+                        className="relative block h-auto w-full"
+                    />
+
+                    <div className="absolute left-[18%] top-[30%] flex -rotate-[24deg] flex-col text-white">
+                        <span className="font-noto font-bold leading-none">
+                            <span className="text-[7vw]">{flagIndex}</span>
+                            <span className="text-[3vw]">/</span>
+                            <span className="text-[7vw]">6</span>
+                        </span>
+                        <span className="font-arsenal text-[1.8vw] font-bold leading-none">
+                            has joined
+                        </span>
+                    </div>
+                </div>
 
                 {/* 4. vignette*/}
                 <div className="absolute inset-0 z-[5] bg-gradient-to-r from-black/60 via-black/10 to-transparent" />
@@ -129,19 +148,23 @@ export default function WaitingRoompage({ session, goNext }: Props) {
                 {leftCount >= 1 ? (
                     /* SIGNED: bungkus dalem relative biar nama-tim nempel ke board */
                     <div className="absolute right-[16%] top-[3%] z-[9] w-[20%]">
-                        <div className="relative w-full animate-persona-in">
+                        <div className="animate-persona-in relative w-full">
                             <img
                                 src="/starting-page/BOARD-STATUS-LEFT(SIGNED).svg"
                                 alt=""
                                 className="block h-auto w-full"
                             />
 
-                            <p className="absolute left-1/2 top-[9%] z-20 -translate-x-1/2 whitespace-nowrap rounded bg-black/70 px-2 py-0.5 font-arsenal text-[1.4vw] font-bold text-white">
+                            <p className="absolute left-[12%] top-[18%] z-20 whitespace-nowrap rounded bg-black px-2 py-0.5 font-arsenal text-[2.5vw] font-bold text-white">
                                 {leftCount}/{maxPlayers}
                             </p>
 
+                            <span className="absolute bottom-[13%] left-[26%] w-[9vw] -rotate-[16deg] font-noto text-[3vw] font-bold leading-none text-[#0A0C0F]">
+                                {leftTeam?.name}{' '}
+                            </span>
+
                             {/* stack of banner slots - one per player, fills in as they join */}
-                            <div className="absolute bottom-[6%] left-[24%] flex w-[56%] flex-col gap-[0.4vw]">
+                            <div className="absolute left-[12%] top-[32%] flex w-[56%] -rotate-[14deg] flex-col gap-[2vw]">
                                 {Array.from({ length: maxPlayers }, (_, i) => (
                                     <div
                                         key={i}
@@ -156,8 +179,9 @@ export default function WaitingRoompage({ session, goNext }: Props) {
                                             alt=""
                                             className="h-auto w-full"
                                         />
-                                        <span className="absolute left-[12%] top-[20%] w-[9vw] -rotate-[9deg] truncate font-arsenal text-[0.9vw] font-bold leading-none text-white">
-                                            {leftTeam?.name ?? ''}
+                                        <span className="absolute left-[12%] top-[30%] w-[9vw] truncate font-arsenal text-[2vw] font-bold leading-none text-white">
+                                            {leftTeam?.players[i]?.nickname ??
+                                                ''}{' '}
                                         </span>
                                     </div>
                                 ))}
@@ -165,30 +189,40 @@ export default function WaitingRoompage({ session, goNext }: Props) {
                         </div>
                     </div>
                 ) : (
-                    <img
-                        src="/starting-page/BOARD-STATUS-LEFT-TILT-(UNSIGNED).svg"
-                        alt=""
-                        className="absolute right-[16%] top-[8%] z-[9] h-auto w-[20%]"
-                    />
+                    <div className="absolute right-[16%] top-[3%] z-[9] w-[20%]">
+                        <img
+                            src="/starting-page/BOARD-STATUS-LEFT-TILT-(UNSIGNED).svg"
+                            alt=""
+                            className="block h-auto w-full"
+                        />
+
+                        <span className="absolute bottom-[13%] left-[26%] w-[9vw] -rotate-[16deg] font-noto text-[3vw] font-bold leading-none text-[#0A0C0F]">
+                            {leftTeam?.name}{' '}
+                        </span>
+                    </div>
                 )}
 
                 {/*  6. BOARD STATUS RIGHT  */}
                 {rightCount >= 1 ? (
                     /* SIGNED: bungkus dalem relative biar nama-tim-kanan nempel ke board */
                     <div className="absolute right-[2%] top-[8%] z-[8] w-[25%]">
-                        <div className="relative w-full animate-persona-in">
+                        <div className="animate-persona-in relative w-full">
                             <img
                                 src="/starting-page/BOARD-STATUS-RIGHT(SIGNED).png"
                                 alt=""
                                 className="block h-auto w-full"
                             />
 
-                            <p className="absolute left-1/2 top-[2%] z-20 -translate-x-1/2 whitespace-nowrap rounded bg-black/70 px-2 py-0.5 font-arsenal text-[1.4vw] font-bold text-white">
+                            <p className="absolute left-1/2 top-[12%] z-20 -translate-x-1/2 whitespace-nowrap rounded bg-black px-2 py-0.5 font-arsenal text-[2.5vw] font-bold text-white">
                                 {rightCount}/{maxPlayers}
                             </p>
 
+                            <span className="absolute bottom-[16%] left-[27%] w-[9vw] -rotate-[8deg] font-noto text-[3vw] font-bold leading-none text-[#0A0C0F]">
+                                {rightTeam?.name}{' '}
+                            </span>
+
                             {/* stack of banner slots - one per player, fills in as they join */}
-                            <div className="absolute bottom-[10%] left-[26%] flex w-[46%] flex-col gap-[0.4vw]">
+                            <div className="absolute left-[18%] top-[28%] flex w-[50%] rotate-[4deg] flex-col gap-[1.4vw]">
                                 {Array.from({ length: maxPlayers }, (_, i) => (
                                     <div
                                         key={i}
@@ -199,12 +233,13 @@ export default function WaitingRoompage({ session, goNext }: Props) {
                                         }`}
                                     >
                                         <img
-                                            src="/starting-page/nama-tim-kanan.svg"
+                                            src="/starting-page/nama-tim.svg"
                                             alt=""
                                             className="h-auto w-full"
                                         />
-                                        <span className="absolute left-[12%] top-[15%] w-[9vw] rotate-[4deg] truncate font-arsenal text-[0.9vw] font-bold leading-none text-white">
-                                            {rightTeam?.name ?? ''}
+                                        <span className="absolute left-[19%] top-[30%] w-[9vw] truncate font-arsenal text-[2vw] font-bold leading-none text-white">
+                                            {rightTeam?.players[i]?.nickname ??
+                                                ''}
                                         </span>
                                     </div>
                                 ))}
@@ -212,12 +247,18 @@ export default function WaitingRoompage({ session, goNext }: Props) {
                         </div>
                     </div>
                 ) : (
+                    <div className="absolute right-[3%] top-[10%] z-[8] h-auto w-[22%]">
+                        <img
+                            src="/starting-page/BOARD-STATUS-RIGHT-(UNSIGNED).svg"
+                            alt=""
+                            className="block h-auto w-full"
+                        />
+
+                        <span className="absolute bottom-[8%] left-[22%] w-[9vw] -rotate-[8deg] font-noto text-[3vw] font-bold leading-none text-[#0A0C0F]">
+                            {rightTeam?.name}{' '}
+                        </span>
+                    </div>
                     /* UNSIGNED */
-                    <img
-                        src="/starting-page/BOARD-STATUS-RIGHT-(UNSIGNED).svg"
-                        alt=""
-                        className="absolute right-[3%] top-[10%] z-[8] h-auto w-[22%]"
-                    />
                 )}
             </div>
 
@@ -240,7 +281,7 @@ export default function WaitingRoompage({ session, goNext }: Props) {
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                     e.preventDefault();
-                                    triggerStart();
+                                    if (session) setShowStartConfirm(true);
                                 }
                             }}
                             maxLength={6}
@@ -265,7 +306,7 @@ export default function WaitingRoompage({ session, goNext }: Props) {
 
                 <button
                     type="button"
-                    onClick={triggerStart}
+                    onClick={() => setShowStartConfirm(true)}
                     disabled={!session}
                     className={`absolute bottom-[30%] left-[25%] w-[20%] -translate-x-1/2 rotate-[2deg] cursor-pointer transition-transform duration-150 disabled:cursor-not-allowed disabled:opacity-60 ${
                         pressState === 'hover'
@@ -288,6 +329,24 @@ export default function WaitingRoompage({ session, goNext }: Props) {
                     className="absolute bottom-[12%] left-1/2 h-auto w-[60%] -translate-x-1/2"
                 />
             </div>
+
+            {showStartConfirm && (
+                <ConfirmPopup
+                    message="Apakah anda yakin untuk memulai sesinya?"
+                    onCancel={() => setShowStartConfirm(false)}
+                    onConfirm={() => {
+                        setShowStartConfirm(false);
+                        triggerStart();
+                    }}
+                    boxClassName="h-[25rem] w-[30rem]"
+                    holdupClassName="ml-4 w-[20rem]"
+                    popupBoxClassName="mt-16"
+                    contentClassName="top-44 gap-10"
+                    messageClassName="w-[25rem] text-3xl"
+                    buttonsClassName="gap-20"
+                    buttonClassName="text-4xl"
+                />
+            )}
         </div>
     );
 }

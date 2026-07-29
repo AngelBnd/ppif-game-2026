@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Events\PlayerJoined;
+use App\Events\PlayerLeft;
 use App\Http\Resources\GameSessionResource;
 use App\Models\GameSession;
+use App\Models\Player;
 use App\Models\Team;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +28,7 @@ class GameSessionController extends Controller
     {
         $validated = $request->validate([
             'team_id' => ['required', 'integer'],
+            'nickname' => ['required', 'string', 'max:255'],
         ]);
 
         $session = GameSession::where('code', $code)->firstOrFail();
@@ -45,6 +48,7 @@ class GameSessionController extends Controller
             );
 
             $player = $team->players()->create([
+                'nickname' => $validated['nickname'],
                 'device_token' => (string) Str::uuid(),
                 'joined_at' => now(),
             ]);
@@ -61,5 +65,35 @@ class GameSessionController extends Controller
             'team' => ['id' => $team->id, 'name' => $team->name],
             'game_session' => new GameSessionResource($session),
         ], 201);
+    }
+
+    /**
+     * A player quitting of their own accord - removes their Player row
+     * (freeing their slot under MAX_PLAYERS_PER_TEAM) rather than just
+     * leaving a ghost occupying the team, and broadcasts so the admin's
+     * headcount and other players update live.
+     */
+    public function leave(Request $request, string $code)
+    {
+        $validated = $request->validate([
+            'device_token' => ['required', 'string'],
+        ]);
+
+        $session = GameSession::where('code', $code)->firstOrFail();
+
+        $player = Player::where('device_token', $validated['device_token'])->firstOrFail();
+
+        abort_unless(
+            $player->team->game_session_id === $session->id,
+            403,
+            'This player does not belong to this session.',
+        );
+
+        $player->delete();
+
+        $session = $session->fresh(['teams.players', 'currentStep']);
+        event(new PlayerLeft($session));
+
+        return response()->noContent();
     }
 }

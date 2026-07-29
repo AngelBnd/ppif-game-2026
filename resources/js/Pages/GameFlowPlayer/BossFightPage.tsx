@@ -1,13 +1,15 @@
+import ChatCodieBubble from '@/Components/global/ChatCodieBubble';
 import { TeamHP } from '@/Components/monitor/TeamHP';
 import Bosshealth from '@/assets/monitor/Bosshealth.svg?react';
 import Codie from '@/assets/monitor/CODDDIE.svg?react';
 import CrossHair from '@/assets/monitor/CROSSHAIR.svg?react';
 import Fire from '@/assets/monitor/FIRE.svg?react';
 import Bullets from '@/assets/monitor/bullets.svg?react';
-import PlaceholderBoss from '@/assets/monitor/placeholderboss.png';
 import Taptap from '@/assets/monitor/taptap.svg?react';
 import Thing from '@/assets/monitor/things.svg?react';
 import Streak from '@/assets/phone/STREAKBG.svg?react';
+import LightingStrike from '@/assets/svgs/LIGHTINGSTRIKE.svg?react';
+import Tapmanajaa from '@/assets/svgs/tapmanajaa.svg?react';
 import type { BossTapResult, SessionInfo } from '@/types/gameSession';
 import type { Step } from '@/types/step';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -62,9 +64,12 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
         const phase = session?.boss_phase;
         if (phase === undefined) return;
 
-        if (prevPhaseRef.current !== undefined && phase !== prevPhaseRef.current) {
+        if (
+            prevPhaseRef.current !== undefined &&
+            phase !== prevPhaseRef.current
+        ) {
             setPhaseBanner(phase);
-            const timeout = setTimeout(() => setPhaseBanner(null), 1500);
+            const timeout = setTimeout(() => setPhaseBanner(null), 5000);
             prevPhaseRef.current = phase;
             return () => clearTimeout(timeout);
         }
@@ -110,6 +115,10 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
     const fireRef = useRef<HTMLDivElement>(null);
     const bossHealthRef = useRef<HTMLDivElement>(null);
     const teamHPContainerRef = useRef<HTMLDivElement>(null);
+    const introLightingRef = useRef<HTMLDivElement>(null);
+    const introChatCodie1Ref = useRef<HTMLDivElement>(null);
+    const introChatCodie2Ref = useRef<HTMLDivElement>(null);
+    const introTapmanajaaRef = useRef<HTMLDivElement>(null);
 
     useLayoutEffect(() => {
         gsap.set(streakRef.current, {
@@ -243,6 +252,55 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
         return () => ctx.revert();
     }, []);
 
+    useLayoutEffect(() => {
+        if (!showIntro) return;
+
+        const ctx = gsap.context(() => {
+            gsap.set(introLightingRef.current, {
+                clipPath: 'inset(0% 0 100% 0)',
+            });
+            gsap.set([introChatCodie1Ref.current, introChatCodie2Ref.current], {
+                xPercent: -30,
+                autoAlpha: 0,
+            });
+            gsap.set(introTapmanajaaRef.current, { autoAlpha: 0 });
+
+            const tl = gsap.timeline();
+
+            tl.to(introLightingRef.current, {
+                clipPath: 'inset(0% 0 0% 0)',
+                duration: 1.4,
+                ease: 'power2.out',
+            })
+                .to(
+                    [introChatCodie1Ref.current, introChatCodie2Ref.current],
+                    {
+                        xPercent: 0,
+                        autoAlpha: 1,
+                        duration: 0.5,
+                        ease: 'back.out(1.2)',
+                        stagger: 0.12,
+                    },
+                    '<0.1',
+                )
+                .to(introTapmanajaaRef.current, {
+                    autoAlpha: 1,
+                    duration: 0.35,
+                    ease: 'power2.out',
+                })
+
+                .to(introTapmanajaaRef.current, {
+                    autoAlpha: 0.15,
+                    duration: 0.6,
+                    repeat: -1,
+                    yoyo: true,
+                    ease: 'power1.inOut',
+                });
+        }, containerRef);
+
+        return () => ctx.revert();
+    }, [showIntro]);
+
     const handleFireTap = () => {
         if (isFinished) return;
 
@@ -274,6 +332,12 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
         }
 
         if (crosshairRef.current) {
+            // Same punch-in-punch-out pattern every tap, but the exact
+            // scale/rotation it punches to varies a bit so a rapid burst
+            // of taps doesn't look mechanically identical each time.
+            const randomScale = gsap.utils.random(0.88, 0.95);
+            const randomRotation = gsap.utils.random(-6, 6);
+
             gsap.fromTo(
                 crosshairRef.current,
                 {
@@ -282,9 +346,9 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
                     rotation: 0,
                 },
                 {
-                    scale: 0.92,
+                    scale: randomScale,
                     y: 10,
-                    rotation: -2,
+                    rotation: randomRotation,
                     duration: 0.06,
                     repeat: 1,
                     yoyo: true,
@@ -308,7 +372,7 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
                     <div className="relative w-full" ref={bossHealthRef}>
                         <Bosshealth className="block h-auto w-full" />
 
-                        <div className="absolute left-[12%] top-2 z-20 h-[1rem] w-[76%] overflow-hidden bg-[#2a3032]">
+                        <div className="absolute left-[12%] top-2 z-20 h-[1rem] w-[76%] overflow-hidden">
                             <div
                                 className="h-full bg-[#BF1E2E] transition-[width] duration-500 ease-out"
                                 style={{
@@ -333,11 +397,18 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
                 {phaseBanner !== null && !isFinished && (
                     <div
                         ref={phaseBannerRef}
-                        className="pointer-events-none absolute inset-x-0 top-[30%] z-[55] flex justify-center"
+                        className="pointer-events-none absolute inset-0 z-[70] flex justify-center"
                     >
-                        <p className="rounded bg-black/70 px-6 py-2 font-arsenal text-3xl font-bold text-[#FFFE25]">
-                            PHASE {phaseBanner}
-                        </p>
+                        <div className="absolute inset-0 z-20 h-screen w-screen bg-[#0A0C0F] opacity-60" />
+                        <div className="absolute top-1/2 z-50 flex -translate-y-1/2 flex-col gap-3">
+                            <p className="relative text-6xl font-bold text-red-400">
+                                PHASE {phaseBanner}
+                            </p>
+                            <p className="= relative rounded">
+                                Ini masih placeholder, nanti bakal ada animasi
+                                yang berjalan 5 detik ya
+                            </p>
+                        </div>
                     </div>
                 )}
 
@@ -346,37 +417,60 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
                     // Tells players what to do before they need to do it
                     // (Shneiderman's "offer informative feedback").
                     <div className="absolute inset-0 z-[65] flex flex-col items-center justify-center gap-3 bg-black/80 px-8 text-center">
-                        <p className="font-arsenal text-2xl font-bold text-[#FFFE25]">
-                            TAP LAYAR SECEPAT MUNGKIN!
-                        </p>
-                        <p className="text-sm text-white/80">
-                            Semua anggota tim ikut tap buat bantu serang
-                            boss.
-                        </p>
-                        <p className="mt-4 text-xs text-white/50">
-                            (Tap di mana saja untuk mulai)
-                        </p>
+                        <div
+                            ref={introLightingRef}
+                            className="absolute w-[32rem]"
+                        >
+                            <LightingStrike className="block h-auto w-full" />
+                        </div>
+                        <ChatCodieBubble
+                            ref={introChatCodie1Ref}
+                            className="-ml-3"
+                            textClassName="top-10 h-[4rem] text-2xl"
+                            text="TAP LAYAR SECEPAT MUNGKIN!"
+                        />
+
+                        <ChatCodieBubble
+                            ref={introChatCodie2Ref}
+                            className="ml-4"
+                            textClassName="top-12 h-[4rem] text-lg"
+                            text="Semua anggota tim dapat ikut untuk membantu!"
+                        />
+
+                        <div
+                            ref={introTapmanajaaRef}
+                            className="relative mt-16"
+                        >
+                            <Tapmanajaa />
+                        </div>
                     </div>
                 )}
 
                 {isFinished && (
                     <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/85 px-8 text-center">
                         <p className="font-arsenal text-2xl font-bold text-white">
-                            The boss was too strong...
+                            Puppet codie tidak bisa dikalahkan....
                         </p>
                     </div>
                 )}
 
-                <div className="absolute left-1/2 top-[40%] z-0 w-[13rem] -translate-x-1/2 -translate-y-1/2">
-                    <img
-                        src={PlaceholderBoss}
-                        alt="Boss"
+                <div className="left-32% absolute top-[40%] z-0 w-[24rem] -translate-y-1/2">
+                    <video
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
                         className="block h-auto w-full"
-                    />
+                    >
+                        <source
+                            src="/videos/puppetcodie.webm"
+                            type="video/webm"
+                        />
+                    </video>
 
                     <div
                         ref={crosshairRef}
-                        className="absolute -bottom-20 left-1/2 w-[9rem] -translate-x-1/2"
+                        className="absolute -right-8 bottom-4 w-[9rem] -translate-x-1/2"
                     >
                         <CrossHair className="block w-full" />
                     </div>

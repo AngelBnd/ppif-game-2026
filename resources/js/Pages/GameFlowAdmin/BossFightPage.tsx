@@ -8,7 +8,6 @@ import FIGHT from '@/assets/monitor/FGHT.svg?react';
 import Fire from '@/assets/monitor/FIRE.svg?react';
 import QuestBox from '@/assets/monitor/QuestBox.svg?react';
 import Bullets from '@/assets/monitor/bullets.svg?react';
-import PlaceholderBoss from '@/assets/monitor/placeholderboss.png';
 import Taptap from '@/assets/monitor/taptap.svg?react';
 import Thing from '@/assets/monitor/things.svg?react';
 import type { SessionInfo } from '@/types/gameSession';
@@ -28,29 +27,54 @@ type Props = {
 
 export default function BossFightPage({ step, session }: Props) {
     const containerRef = useRef<HTMLElement>(null);
-    const bossHp = session?.boss_hp ?? 0;
-    const bossHpMax = session?.boss_hp_max ?? 1;
     const isFinished = session?.boss_finished_at != null;
+
+    // The HP bar shown on screen lags behind the live session state on a
+    // phase change - held at the old phase's numbers for 5s (with the
+    // "PHASE N" banner up) before snapping to the new phase, instead of the
+    // bar instantly jumping the moment the triggering tap lands server-side.
+    // Regular in-phase HP ticks still update immediately, no delay.
+    const [displayedHp, setDisplayedHp] = useState(session?.boss_hp ?? 0);
+    const [displayedHpMax, setDisplayedHpMax] = useState(
+        session?.boss_hp_max ?? 1,
+    );
 
     const [phaseBanner, setPhaseBanner] = useState<number | null>(null);
     const prevPhaseRef = useRef<number | undefined>(undefined);
     const phaseBannerRef = useRef<HTMLDivElement>(null);
 
-    // Flash "PHASE N" whenever the boss's phase changes - driven by the
-    // Echo-synced session state, same as the player screen.
     useEffect(() => {
         const phase = session?.boss_phase;
-        if (phase === undefined) return;
+        const hp = session?.boss_hp;
+        const hpMax = session?.boss_hp_max;
+        if (phase === undefined || hp === undefined || hpMax === undefined)
+            return;
 
-        if (prevPhaseRef.current !== undefined && phase !== prevPhaseRef.current) {
-            setPhaseBanner(phase);
-            const timeout = setTimeout(() => setPhaseBanner(null), 1500);
+        if (prevPhaseRef.current === undefined) {
+            // Initial load - nothing to transition from, snap immediately.
             prevPhaseRef.current = phase;
+            setDisplayedHp(hp);
+            setDisplayedHpMax(hpMax);
+            return;
+        }
+
+        if (phase !== prevPhaseRef.current) {
+            prevPhaseRef.current = phase;
+            setPhaseBanner(phase);
+
+            const timeout = setTimeout(() => {
+                setDisplayedHp(hp);
+                setDisplayedHpMax(hpMax);
+                setPhaseBanner(null);
+            }, 5000);
+
             return () => clearTimeout(timeout);
         }
 
-        prevPhaseRef.current = phase;
-    }, [session?.boss_phase]);
+        // Same phase - just HP ticking down, reflect it live.
+        setDisplayedHp(hp);
+        setDisplayedHpMax(hpMax);
+    }, [session?.boss_phase, session?.boss_hp, session?.boss_hp_max]);
 
     useEffect(() => {
         if (phaseBanner === null || !phaseBannerRef.current) return;
@@ -74,6 +98,7 @@ export default function BossFightPage({ step, session }: Props) {
     const bossGroupRef = useRef<HTMLDivElement>(null);
     const fightRef = useRef<HTMLDivElement>(null);
     const bossOverlayRef = useRef<HTMLDivElement>(null);
+    const crosshairPulseRef = useRef<HTMLDivElement>(null);
 
     useLayoutEffect(() => {
         const container = containerRef.current;
@@ -309,6 +334,23 @@ export default function BossFightPage({ step, session }: Props) {
         return () => ctx.revert();
     }, []);
 
+    useEffect(() => {
+        if (!crosshairPulseRef.current) return;
+
+        const tween = gsap.to(crosshairPulseRef.current, {
+            scale: 1.35,
+            duration: 0.6,
+            rotate: 5,
+            repeat: -1,
+            yoyo: true,
+            ease: 'sine.inOut',
+        });
+
+        return () => {
+            tween.kill();
+        };
+    }, []);
+
     return (
         <main
             ref={containerRef}
@@ -347,9 +389,9 @@ export default function BossFightPage({ step, session }: Props) {
 
             <div
                 ref={bossHealthRef}
-                className="absolute left-4 top-24 origin-center"
+                className="absolute left-4 top-24 z-30 origin-center"
             >
-                <BossHealthBar currentHP={bossHp} maxHP={bossHpMax} />
+                <BossHealthBar currentHP={displayedHp} maxHP={displayedHpMax} />
             </div>
 
             <div
@@ -370,18 +412,25 @@ export default function BossFightPage({ step, session }: Props) {
             {phaseBanner !== null && !isFinished && (
                 <div
                     ref={phaseBannerRef}
-                    className="pointer-events-none absolute inset-x-0 top-[35%] z-[65] flex justify-center"
+                    className="pointer-events-none absolute inset-0 z-[70] flex justify-center"
                 >
-                    <p className="rounded bg-black/70 px-10 py-3 font-arsenal text-6xl font-bold text-[#FFFE25]">
-                        PHASE {phaseBanner}
-                    </p>
+                    <div className="absolute inset-0 z-20 h-screen w-screen bg-[#0A0C0F] opacity-60" />
+                    <div className="absolute top-1/2 z-50 flex -translate-y-1/2 flex-col gap-3">
+                        <p className="relative text-6xl font-bold text-red-400">
+                            PHASE {phaseBanner}
+                        </p>
+                        <p className="= relative rounded">
+                            Ini masih placeholder, nanti bakal ada animasi yang
+                            berjalan 5 detik ya
+                        </p>
+                    </div>
                 </div>
             )}
 
             {isFinished && (
-                <div className="absolute inset-0 z-[70] flex items-center justify-center bg-black/85 px-8 text-center">
+                <div className="absolute inset-0 z-[45] flex items-center justify-center bg-black/85 px-8 text-center">
                     <p className="font-arsenal text-4xl font-bold text-white">
-                        The boss was too strong...
+                        Puppet codie tidak bisa dikalahkan...
                     </p>
                 </div>
             )}
@@ -393,14 +442,23 @@ export default function BossFightPage({ step, session }: Props) {
                 <QuestBox className="block h-auto w-full" />
             </div>
 
-            <div className="absolute left-[55%] top-[16%] z-0">
-                <img
-                    src={PlaceholderBoss}
-                    alt="Boss"
-                    className="block h-auto w-[20rem]"
-                />
+            <div className="absolute left-[47%] top-[10%] z-0">
+                <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="block h-auto w-[24rem]"
+                >
+                    <source src="/videos/puppetcodie.webm" type="video/webm" />
+                </video>
 
-                <CrossHair className="absolute bottom-0 left-24 z-20 w-[12rem]" />
+                <div
+                    ref={crosshairPulseRef}
+                    className="absolute bottom-4 left-48 z-20 w-[12rem]"
+                >
+                    <CrossHair className="block h-auto w-full" />
+                </div>
             </div>
             <div
                 ref={bossOverlayRef}

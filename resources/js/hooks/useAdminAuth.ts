@@ -56,11 +56,20 @@ export function useAdminAuth() {
     }, []);
 
     const logout = useCallback(async () => {
-        await fetch('/api/admin/logout', {
-            method: 'POST',
-            headers: { 'X-XSRF-TOKEN': getXsrfToken() },
-        });
+        // Clear client-side state up front so the UI reacts immediately -
+        // previously this awaited the network round trip first, so the
+        // login form only appeared after the request resolved.
         setUser(null);
+
+        try {
+            await fetch('/api/admin/logout', {
+                method: 'POST',
+                headers: { 'X-XSRF-TOKEN': getXsrfToken() },
+            });
+        } catch {
+            // The user is already logged out client-side regardless of
+            // whether the server request itself succeeded.
+        }
     }, []);
 
     return { user, isLoading, error, login, logout };

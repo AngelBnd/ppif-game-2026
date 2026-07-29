@@ -46,10 +46,23 @@ export function useAdminSession(enabled: boolean) {
         const channel = echo.channel(`game-session.${session.code}`);
 
         channel.listen('.step.advanced', (payload: SessionInfo) => {
-            setSession(payload);
+            setSession((current) => {
+                // This admin's own advance() call already applied the new
+                // step (with current_step_correct_answer, which this public
+                // broadcast can never carry - players share this channel).
+                // Re-applying the broadcast copy here would wipe that field.
+                if (current?.current_step?.id === payload.current_step?.id) {
+                    return current;
+                }
+                return payload;
+            });
         });
 
         channel.listen('.player.joined', (payload: SessionInfo) => {
+            setSession(payload);
+        });
+
+        channel.listen('.player.left', (payload: SessionInfo) => {
             setSession(payload);
         });
 
@@ -136,6 +149,21 @@ export function useAdminSession(enabled: boolean) {
         return fetchByCode(session.code);
     }, [session, fetchByCode]);
 
+    // Wipes the current session (and, via cascade, its teams/players/
+    // answers/leaderboard rows) so the PIC can start a fresh room.
+    const clearSession = useCallback(async () => {
+        if (!session) return;
+
+        const res = await fetch(`/api/admin/game-sessions/${session.code}`, {
+            method: 'DELETE',
+            headers: { 'X-XSRF-TOKEN': getXsrfToken() },
+        });
+
+        if (!res.ok) throw new Error('Failed to clear session');
+
+        setSession(null);
+    }, [session]);
+
     return {
         session,
         isLoading,
@@ -143,6 +171,7 @@ export function useAdminSession(enabled: boolean) {
         error,
         createSession,
         advanceSession,
+        clearSession,
         refresh,
     };
 }

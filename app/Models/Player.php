@@ -13,6 +13,7 @@ class Player extends Model
 
     protected $fillable = [
         'team_id',
+        'nickname',
         'device_token',
         'joined_at',
     ];

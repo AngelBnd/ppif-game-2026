@@ -14,6 +14,7 @@ class Team extends Model
     protected $fillable = [
         'game_session_id',
         'name',
+        'number',
         'score',
         'hp',
     ];
