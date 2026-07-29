@@ -185,15 +185,22 @@ class SessionController extends Controller
     }
 
     /**
-     * Admin-only: delete a session (and, via cascade, its teams/players/
-     * answers/leaderboard rows) - lets the monitoring dashboard clear out
-     * leftover test rooms instead of them piling up forever.
+     * Delete a session (and, via cascade, its teams/players/answers/
+     * leaderboard rows) - restricted to the PIC who owns it (or the
+     * monitoring admin), lets a PIC wipe a session and start fresh instead
+     * of leftover test rooms piling up forever.
      */
     public function destroy(Request $request, string $code)
     {
-        abort_unless($request->user()->is_admin, 403);
+        $session = GameSession::where('code', $code)->firstOrFail();
 
-        GameSession::where('code', $code)->firstOrFail()->delete();
+        abort_unless(
+            $session->user_id === $request->user()->id || $request->user()->is_admin,
+            403,
+            'This is not your session.',
+        );
+
+        $session->delete();
 
         return response()->noContent();
     }

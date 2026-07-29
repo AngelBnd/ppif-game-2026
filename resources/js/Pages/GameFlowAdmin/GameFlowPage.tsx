@@ -38,9 +38,12 @@ export default function AdminFlowPage() {
         isLoading: isSessionLoading,
         createSession,
         advanceSession,
+        clearSession,
     } = useAdminSession(!!user && !user.is_admin);
 
     const [showNextConfirm, setShowNextConfirm] = useState(false);
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
+    const [isClearing, setIsClearing] = useState(false);
 
     // The monitoring-only admin account doesn't run a room - send it
     // straight to the overview dashboard instead of the group-number form.
@@ -164,6 +167,21 @@ export default function AdminFlowPage() {
         goNext();
     };
 
+    const confirmClearSession = async () => {
+        setIsClearing(true);
+
+        try {
+            await clearSession();
+            setShowClearConfirm(false);
+            navigate('/admin/lobby', { replace: true });
+        } catch {
+            // Leave the popup open so the PIC can see something went wrong
+            // and try again, instead of silently pretending it worked.
+        } finally {
+            setIsClearing(false);
+        }
+    };
+
     return (
         <div className="h-screen w-screen overflow-hidden">
             {step.type !== 'waiting' && step.slug !== 'activity-4' && (
@@ -185,6 +203,31 @@ export default function AdminFlowPage() {
                     popupBoxClassName="mt-16"
                     contentClassName="top-44 gap-10"
                     messageClassName="w-[25rem] text-3xl"
+                    buttonsClassName="gap-20"
+                    buttonClassName="text-4xl"
+                />
+            )}
+
+            <button
+                type="button"
+                onClick={() => setShowClearConfirm(true)}
+                className="fixed bottom-2 right-2 z-50 rounded-md bg-red-600/10 px-4 py-1 font-arsenal text-xs text-white/50 shadow-lg transition-transform hover:scale-105 active:scale-95"
+            >
+                Clear Session
+            </button>
+
+            {showClearConfirm && (
+                <ConfirmPopup
+                    message="Apakah anda benar-benar yakin ingin menghapus sesi ini? Semua data kelompok (nama, pemain, jawaban, skor) akan hilang secara permanen."
+                    onCancel={() => setShowClearConfirm(false)}
+                    onConfirm={confirmClearSession}
+                    confirmDisabled={isClearing}
+                    cancelDisabled={isClearing}
+                    boxClassName="h-[25rem] w-[30rem]"
+                    holdupClassName="ml-4 w-[20rem]"
+                    popupBoxClassName="mt-16"
+                    contentClassName="top-44 gap-10"
+                    messageClassName="w-[25rem] text-2xl"
                     buttonsClassName="gap-20"
                     buttonClassName="text-4xl"
                 />

@@ -27,32 +27,54 @@ type Props = {
 
 export default function BossFightPage({ step, session }: Props) {
     const containerRef = useRef<HTMLElement>(null);
-    const bossHp = session?.boss_hp ?? 0;
-    const bossHpMax = session?.boss_hp_max ?? 1;
     const isFinished = session?.boss_finished_at != null;
+
+    // The HP bar shown on screen lags behind the live session state on a
+    // phase change - held at the old phase's numbers for 5s (with the
+    // "PHASE N" banner up) before snapping to the new phase, instead of the
+    // bar instantly jumping the moment the triggering tap lands server-side.
+    // Regular in-phase HP ticks still update immediately, no delay.
+    const [displayedHp, setDisplayedHp] = useState(session?.boss_hp ?? 0);
+    const [displayedHpMax, setDisplayedHpMax] = useState(
+        session?.boss_hp_max ?? 1,
+    );
 
     const [phaseBanner, setPhaseBanner] = useState<number | null>(null);
     const prevPhaseRef = useRef<number | undefined>(undefined);
     const phaseBannerRef = useRef<HTMLDivElement>(null);
 
-    // Flash "PHASE N" whenever the boss's phase changes - driven by the
-    // Echo-synced session state, same as the player screen.
     useEffect(() => {
         const phase = session?.boss_phase;
-        if (phase === undefined) return;
+        const hp = session?.boss_hp;
+        const hpMax = session?.boss_hp_max;
+        if (phase === undefined || hp === undefined || hpMax === undefined)
+            return;
 
-        if (
-            prevPhaseRef.current !== undefined &&
-            phase !== prevPhaseRef.current
-        ) {
-            setPhaseBanner(phase);
-            const timeout = setTimeout(() => setPhaseBanner(null), 1500);
+        if (prevPhaseRef.current === undefined) {
+            // Initial load - nothing to transition from, snap immediately.
             prevPhaseRef.current = phase;
+            setDisplayedHp(hp);
+            setDisplayedHpMax(hpMax);
+            return;
+        }
+
+        if (phase !== prevPhaseRef.current) {
+            prevPhaseRef.current = phase;
+            setPhaseBanner(phase);
+
+            const timeout = setTimeout(() => {
+                setDisplayedHp(hp);
+                setDisplayedHpMax(hpMax);
+                setPhaseBanner(null);
+            }, 5000);
+
             return () => clearTimeout(timeout);
         }
 
-        prevPhaseRef.current = phase;
-    }, [session?.boss_phase]);
+        // Same phase - just HP ticking down, reflect it live.
+        setDisplayedHp(hp);
+        setDisplayedHpMax(hpMax);
+    }, [session?.boss_phase, session?.boss_hp, session?.boss_hp_max]);
 
     useEffect(() => {
         if (phaseBanner === null || !phaseBannerRef.current) return;
@@ -369,7 +391,7 @@ export default function BossFightPage({ step, session }: Props) {
                 ref={bossHealthRef}
                 className="absolute left-4 top-24 z-30 origin-center"
             >
-                <BossHealthBar currentHP={bossHp} maxHP={bossHpMax} />
+                <BossHealthBar currentHP={displayedHp} maxHP={displayedHpMax} />
             </div>
 
             <div
@@ -393,13 +415,13 @@ export default function BossFightPage({ step, session }: Props) {
                     className="pointer-events-none absolute inset-x-0 top-[35%] z-[65] flex justify-center"
                 >
                     <p className="rounded bg-black/70 px-10 py-3 font-arsenal text-6xl font-bold text-[#FFFE25]">
-                        PHASE {phaseBanner}
+                        PHASE {phaseBanner} Ini masih placeholder
                     </p>
                 </div>
             )}
 
             {isFinished && (
-                <div className="absolute inset-0 z-[70] flex items-center justify-center bg-black/85 px-8 text-center">
+                <div className="absolute inset-0 z-[45] flex items-center justify-center bg-black/85 px-8 text-center">
                     <p className="font-arsenal text-4xl font-bold text-white">
                         The boss was too strong...
                     </p>

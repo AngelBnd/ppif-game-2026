@@ -1,6 +1,7 @@
+import ConfirmPopup from '@/Components/global/ConfirmPopup';
 import { usePlayerSession } from '@/hooks/usePlayerSession';
 import { useSteps } from '@/hooks/useSteps';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import ActivityPage from './ActivityPage';
@@ -20,9 +21,25 @@ export default function PlayerFlowPage() {
         team,
         peekSession,
         joinSession,
+        leaveSession,
         submitAnswer,
         submitBossTap,
     } = usePlayerSession();
+
+    const [showQuitConfirm, setShowQuitConfirm] = useState(false);
+    const [isQuitting, setIsQuitting] = useState(false);
+
+    const confirmQuit = async () => {
+        setIsQuitting(true);
+
+        try {
+            await leaveSession();
+            setShowQuitConfirm(false);
+            navigate('/player/lobby', { replace: true });
+        } finally {
+            setIsQuitting(false);
+        }
+    };
 
     // Set right before a dev-nav click so the sync effect below doesn't
     // immediately snap back to the live session's step on the next render.
@@ -140,6 +157,33 @@ export default function PlayerFlowPage() {
                         session={session}
                         team={team}
                         onTap={submitBossTap}
+                    />
+                )}
+
+                {team && (
+                    <button
+                        type="button"
+                        onClick={() => setShowQuitConfirm(true)}
+                        className="fixed bottom-2 right-2 z-[999] rounded-sm bg-black/50 px-3 py-2 font-arsenal text-xs text-white/30 shadow-lg"
+                    >
+                        Keluar
+                    </button>
+                )}
+
+                {showQuitConfirm && (
+                    <ConfirmPopup
+                        message="Apakah anda yakin ingin keluar dari sesi ini?"
+                        onCancel={() => setShowQuitConfirm(false)}
+                        onConfirm={confirmQuit}
+                        confirmDisabled={isQuitting}
+                        cancelDisabled={isQuitting}
+                        boxClassName="w-[21rem] max-w-[90vw]"
+                        holdupClassName="left-4 top-0 w-[65%]"
+                        popupBoxClassName="mt-12 block h-auto w-full"
+                        contentClassName="top-28 w-full items-center gap-6 px-6"
+                        messageClassName="text-xl"
+                        buttonsClassName="gap-10"
+                        buttonClassName="text-2xl"
                     />
                 )}
             </div>

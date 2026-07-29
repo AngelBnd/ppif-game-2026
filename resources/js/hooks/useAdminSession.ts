@@ -62,6 +62,10 @@ export function useAdminSession(enabled: boolean) {
             setSession(payload);
         });
 
+        channel.listen('.player.left', (payload: SessionInfo) => {
+            setSession(payload);
+        });
+
         channel.listen(
             '.answer.submitted',
             (payload: { step_id: number; answered_count: number }) => {
@@ -145,6 +149,21 @@ export function useAdminSession(enabled: boolean) {
         return fetchByCode(session.code);
     }, [session, fetchByCode]);
 
+    // Wipes the current session (and, via cascade, its teams/players/
+    // answers/leaderboard rows) so the PIC can start a fresh room.
+    const clearSession = useCallback(async () => {
+        if (!session) return;
+
+        const res = await fetch(`/api/admin/game-sessions/${session.code}`, {
+            method: 'DELETE',
+            headers: { 'X-XSRF-TOKEN': getXsrfToken() },
+        });
+
+        if (!res.ok) throw new Error('Failed to clear session');
+
+        setSession(null);
+    }, [session]);
+
     return {
         session,
         isLoading,
@@ -152,6 +171,7 @@ export function useAdminSession(enabled: boolean) {
         error,
         createSession,
         advanceSession,
+        clearSession,
         refresh,
     };
 }
