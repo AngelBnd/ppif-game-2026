@@ -1,12 +1,13 @@
 import ActivityPayAttention from '@/assets/phone/ActivityPlayer.svg?react';
 import StreakBG from '@/assets/phone/STREAKBG.svg?react';
-import { PlayerFlowStep } from '@/data/playerGameFlow';
+import type { Step } from '@/types/step';
 
+import TriangleThing from '@/Components/monitor/TriangleThing';
 import gsap from 'gsap';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 
 type Props = {
-    step: PlayerFlowStep;
+    step: Step;
 };
 
 export default function StorylinePage({ step }: Props) {
@@ -83,6 +84,7 @@ export default function StorylinePage({ step }: Props) {
             ref={containerRef}
             className="relative flex min-h-screen items-center justify-center overflow-hidden text-white"
         >
+            <div className="absolute h-screen w-screen bg-[#0A0C0F] opacity-70" />
             <div
                 ref={bgRef}
                 className="absolute inset-0 flex items-center justify-center"
@@ -94,6 +96,14 @@ export default function StorylinePage({ step }: Props) {
             </div>
 
             <div ref={storylineRef} className="relative z-10">
+                <TriangleThing
+                    className="absolute left-4 z-50 rotate-45"
+                    size="2.5rem"
+                />
+                <TriangleThing
+                    className="absolute -bottom-6 right-3 z-50 rotate-[220deg]"
+                    size="3rem"
+                />
                 <ActivityPayAttention className="h-auto w-full" />
             </div>
         </main>

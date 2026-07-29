@@ -4,21 +4,108 @@ import Codie from '@/assets/monitor/CODDDIE.svg?react';
 import CrossHair from '@/assets/monitor/CROSSHAIR.svg?react';
 import Fire from '@/assets/monitor/FIRE.svg?react';
 import Bullets from '@/assets/monitor/bullets.svg?react';
-import PlaceholderBoss from '@/assets/monitor/placeholderboss.png';
 import Taptap from '@/assets/monitor/taptap.svg?react';
 import Thing from '@/assets/monitor/things.svg?react';
 import Streak from '@/assets/phone/STREAKBG.svg?react';
-import { PlayerFlowStep } from '@/data/playerGameFlow';
-import { useLayoutEffect, useRef } from 'react';
+import ChatCodie from '@/assets/svgs/CHATCODIE.svg?react';
+import LightingStrike from '@/assets/svgs/LIGHTINGSTRIKE.svg?react';
+import Tapmanajaa from '@/assets/svgs/tapmanajaa.svg?react';
+import type { BossTapResult, SessionInfo } from '@/types/gameSession';
+import type { Step } from '@/types/step';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import gsap from 'gsap';
 
+// Total HP across all 3 boss phases - must match the sum of
+// GameSession::BOSS_PHASE_MAX_HP on the backend. Used only to size the
+// "contribution" meter so it fills up gradually over the whole fight
+// instead of maxing out almost immediately.
+const TEAM_CONTRIBUTION_MAX = 900;
+
+// Batches taps client-side and flushes on an interval instead of firing an
+// HTTP request per tap - see BossFightController@tap for the server side.
+const TAP_FLUSH_INTERVAL_MS = 300;
+
 type Props = {
-    step: PlayerFlowStep;
+    step: Step;
+    session: SessionInfo | null;
+    team: { id: number; name: string } | null;
+    onTap: (taps: number) => Promise<BossTapResult>;
 };
 
-export default function BossFightPage({ step }: Props) {
+export default function BossFightPage({ step, session, team, onTap }: Props) {
     const containerRef = useRef<HTMLElement>(null);
+    const pendingTapsRef = useRef(0);
+    const [cutscene, setCutscene] = useState(false);
+    // Placeholder instructional overlay ("offer informative feedback" before
+    // asking players to act) - frontend to restyle/animate this later.
+    const [showIntro, setShowIntro] = useState(true);
+    const [phaseBanner, setPhaseBanner] = useState<number | null>(null);
+    const prevPhaseRef = useRef<number | undefined>(undefined);
+    const phaseBannerRef = useRef<HTMLDivElement>(null);
+
+    const bossHp = session?.boss_hp ?? 0;
+    const bossHpMax = session?.boss_hp_max ?? 1;
+    const bossHpPercent = Math.min(
+        Math.max((bossHp / bossHpMax) * 100, 0),
+        100,
+    );
+    const myTeam = session?.teams.find((t) => t.id === team?.id);
+    const isFinished = cutscene || session?.boss_finished_at != null;
+
+    useEffect(() => {
+        if (session?.boss_finished_at) setCutscene(true);
+    }, [session?.boss_finished_at]);
+
+    // Flash "PHASE N" whenever the boss's phase changes - either from this
+    // device's own tap batch or from another player's/team's, via the
+    // shared session state (Echo-synced in usePlayerSession).
+    useEffect(() => {
+        const phase = session?.boss_phase;
+        if (phase === undefined) return;
+
+        if (
+            prevPhaseRef.current !== undefined &&
+            phase !== prevPhaseRef.current
+        ) {
+            setPhaseBanner(phase);
+            const timeout = setTimeout(() => setPhaseBanner(null), 1500);
+            prevPhaseRef.current = phase;
+            return () => clearTimeout(timeout);
+        }
+
+        prevPhaseRef.current = phase;
+    }, [session?.boss_phase]);
+
+    useEffect(() => {
+        if (phaseBanner === null || !phaseBannerRef.current) return;
+
+        gsap.fromTo(
+            phaseBannerRef.current,
+            { scale: 0.5, autoAlpha: 0 },
+            { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(2)' },
+        );
+    }, [phaseBanner]);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (pendingTapsRef.current === 0 || isFinished) return;
+
+            const taps = Math.min(pendingTapsRef.current, 50);
+            // Only drop what's actually being sent - a burst over 50
+            // carries the remainder into the next flush instead of
+            // silently losing taps during fast tapping.
+            pendingTapsRef.current -= taps;
+
+            onTap(taps)
+                .then((result) => {
+                    if (result.cutscene) setCutscene(true);
+                })
+                .catch(() => {});
+        }, TAP_FLUSH_INTERVAL_MS);
+
+        return () => clearInterval(interval);
+    }, [onTap, isFinished]);
     const codieRef = useRef<HTMLDivElement>(null);
     const streakRef = useRef<HTMLDivElement>(null);
     const thingRef = useRef<HTMLDivElement>(null);
@@ -28,6 +115,10 @@ export default function BossFightPage({ step }: Props) {
     const fireRef = useRef<HTMLDivElement>(null);
     const bossHealthRef = useRef<HTMLDivElement>(null);
     const teamHPContainerRef = useRef<HTMLDivElement>(null);
+    const introLightingRef = useRef<HTMLDivElement>(null);
+    const introChatCodie1Ref = useRef<HTMLDivElement>(null);
+    const introChatCodie2Ref = useRef<HTMLDivElement>(null);
+    const introTapmanajaaRef = useRef<HTMLDivElement>(null);
 
     useLayoutEffect(() => {
         gsap.set(streakRef.current, {
@@ -161,7 +252,64 @@ export default function BossFightPage({ step }: Props) {
         return () => ctx.revert();
     }, []);
 
+    useLayoutEffect(() => {
+        if (!showIntro) return;
+
+        const ctx = gsap.context(() => {
+            gsap.set(introLightingRef.current, {
+                clipPath: 'inset(0% 0 100% 0)',
+            });
+            gsap.set([introChatCodie1Ref.current, introChatCodie2Ref.current], {
+                xPercent: -30,
+                autoAlpha: 0,
+            });
+            gsap.set(introTapmanajaaRef.current, { autoAlpha: 0 });
+
+            const tl = gsap.timeline();
+
+            tl.to(introLightingRef.current, {
+                clipPath: 'inset(0% 0 0% 0)',
+                duration: 1.4,
+                ease: 'power2.out',
+            })
+                .to(
+                    [introChatCodie1Ref.current, introChatCodie2Ref.current],
+                    {
+                        xPercent: 0,
+                        autoAlpha: 1,
+                        duration: 0.5,
+                        ease: 'back.out(1.2)',
+                        stagger: 0.12,
+                    },
+                    '<0.1',
+                )
+                .to(introTapmanajaaRef.current, {
+                    autoAlpha: 1,
+                    duration: 0.35,
+                    ease: 'power2.out',
+                })
+
+                .to(introTapmanajaaRef.current, {
+                    autoAlpha: 0.15,
+                    duration: 0.6,
+                    repeat: -1,
+                    yoyo: true,
+                    ease: 'power1.inOut',
+                });
+        }, containerRef);
+
+        return () => ctx.revert();
+    }, [showIntro]);
+
     const handleFireTap = () => {
+        if (isFinished) return;
+
+        // First tap doubles as "dismiss the instructions" - still counts
+        // toward the boss's HP, no wasted tap.
+        if (showIntro) setShowIntro(false);
+
+        pendingTapsRef.current += 1;
+
         gsap.killTweensOf(fireRef.current);
         gsap.killTweensOf(fireRef.current);
 
@@ -184,6 +332,12 @@ export default function BossFightPage({ step }: Props) {
         }
 
         if (crosshairRef.current) {
+            // Same punch-in-punch-out pattern every tap, but the exact
+            // scale/rotation it punches to varies a bit so a rapid burst
+            // of taps doesn't look mechanically identical each time.
+            const randomScale = gsap.utils.random(0.88, 0.95);
+            const randomRotation = gsap.utils.random(-6, 6);
+
             gsap.fromTo(
                 crosshairRef.current,
                 {
@@ -192,9 +346,9 @@ export default function BossFightPage({ step }: Props) {
                     rotation: 0,
                 },
                 {
-                    scale: 0.92,
+                    scale: randomScale,
                     y: 10,
-                    rotation: -2,
+                    rotation: randomRotation,
                     duration: 0.06,
                     repeat: 1,
                     yoyo: true,
@@ -218,11 +372,11 @@ export default function BossFightPage({ step }: Props) {
                     <div className="relative w-full" ref={bossHealthRef}>
                         <Bosshealth className="block h-auto w-full" />
 
-                        <div className="absolute left-[12%] top-2 z-20 h-[1rem] w-[76%] overflow-hidden bg-[#2a3032]">
+                        <div className="absolute left-[12%] top-2 z-20 h-[1rem] w-[76%] overflow-hidden">
                             <div
                                 className="h-full bg-[#BF1E2E] transition-[width] duration-500 ease-out"
                                 style={{
-                                    width: `${50}%`,
+                                    width: `${bossHpPercent}%`,
                                 }}
                             />
                         </div>
@@ -232,20 +386,89 @@ export default function BossFightPage({ step }: Props) {
                         className="-mt-4 scale-75 self-end"
                         ref={teamHPContainerRef}
                     >
-                        <TeamHP teamName="apalah" currentHP={20} maxHP={100} />
+                        <TeamHP
+                            teamName={team?.name ?? ''}
+                            currentHP={myTeam?.hp ?? 0}
+                            maxHP={TEAM_CONTRIBUTION_MAX}
+                        />
                     </div>
                 </div>
 
-                <div className="absolute left-1/2 top-[40%] z-0 w-[13rem] -translate-x-1/2 -translate-y-1/2">
-                    <img
-                        src={PlaceholderBoss}
-                        alt="Boss"
+                {phaseBanner !== null && !isFinished && (
+                    <div
+                        ref={phaseBannerRef}
+                        className="pointer-events-none absolute inset-x-0 top-[30%] z-[55] flex justify-center"
+                    >
+                        <p className="rounded bg-black/70 px-6 py-2 font-arsenal text-3xl font-bold text-[#FFFE25]">
+                            PHASE {phaseBanner}
+                        </p>
+                    </div>
+                )}
+
+                {showIntro && !isFinished && (
+                    // PLACEHOLDER - frontend team to redesign/restyle this.
+                    // Tells players what to do before they need to do it
+                    // (Shneiderman's "offer informative feedback").
+                    <div className="absolute inset-0 z-[65] flex flex-col items-center justify-center gap-3 bg-black/80 px-8 text-center">
+                        <div
+                            ref={introLightingRef}
+                            className="absolute w-[32rem]"
+                        >
+                            <LightingStrike className="block h-auto w-full" />
+                        </div>
+                        <div
+                            ref={introChatCodie1Ref}
+                            className="relative -ml-3"
+                        >
+                            <ChatCodie className="block h-auto w-[25rem]" />
+                            <h1 className="absolute right-6 top-10 h-[4rem] w-[13.5rem] text-start font-arsenal text-2xl font-bold leading-tight text-[#F0F2F5]">
+                                {' '}
+                                TAP LAYAR SECEPAT MUNGKIN!
+                            </h1>
+                        </div>
+
+                        <div ref={introChatCodie2Ref} className="relative ml-4">
+                            <ChatCodie className="block h-auto w-[25rem]" />
+                            <h1 className="absolute right-6 top-12 h-[4rem] w-[13.5rem] text-start font-arsenal text-lg font-bold leading-tight text-[#F0F2F5]">
+                                {' '}
+                                Semua anggota tim dapat ikut untuk membantu!
+                            </h1>
+                        </div>
+
+                        <div
+                            ref={introTapmanajaaRef}
+                            className="relative mt-16"
+                        >
+                            <Tapmanajaa />
+                        </div>
+                    </div>
+                )}
+
+                {isFinished && (
+                    <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/85 px-8 text-center">
+                        <p className="font-arsenal text-2xl font-bold text-white">
+                            The boss was too strong...
+                        </p>
+                    </div>
+                )}
+
+                <div className="left-32% absolute top-[40%] z-0 w-[24rem] -translate-y-1/2">
+                    <video
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
                         className="block h-auto w-full"
-                    />
+                    >
+                        <source
+                            src="/videos/puppetcodie.webm"
+                            type="video/webm"
+                        />
+                    </video>
 
                     <div
                         ref={crosshairRef}
-                        className="absolute -bottom-20 left-1/2 w-[9rem] -translate-x-1/2"
+                        className="absolute -right-8 bottom-4 w-[9rem] -translate-x-1/2"
                     >
                         <CrossHair className="block w-full" />
                     </div>

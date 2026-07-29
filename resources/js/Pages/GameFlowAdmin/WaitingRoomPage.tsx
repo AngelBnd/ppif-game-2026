@@ -1,14 +1,28 @@
+import { useAdminAuth } from '@/hooks/useAdminAuth';
+import type { SessionInfo } from '@/types/gameSession';
+import type { Step } from '@/types/step';
 import { useEffect, useState } from 'react';
-import type { AdminFlowStep } from '../../data/adminGameFlow';
 
 type Props = {
-    step: AdminFlowStep;
+    step: Step;
+    session: SessionInfo | null;
     goNext: () => void;
 };
 
-export default function WaitingRoompage({ step, goNext }: Props) {
-    const [pin, setPin] = useState('');
-    const [joinedCount, setJoinedCount] = useState(0);
+export default function WaitingRoompage({ session, goNext }: Props) {
+    const pin = session?.code ?? '';
+    const { user, isLoading: isAuthLoading, login, logout } = useAdminAuth();
+    const maxPlayers = session?.max_players_per_team ?? 3;
+    const leftTeam = session?.teams[0];
+    const rightTeam = session?.teams[1];
+    const leftCount = leftTeam?.players.length ?? 0;
+    const rightCount = rightTeam?.players.length ?? 0;
+    // Flag art only has 3 states (0/1/2) - reuse it as "how many sides have
+    // at least one player in" rather than a literal head count.
+    const flagIndex = Math.min(
+        (leftCount >= 1 ? 1 : 0) + (rightCount >= 1 ? 1 : 0),
+        2,
+    );
     const [pressState, setPressState] = useState<'idle' | 'hover' | 'press'>(
         'idle',
     );
@@ -20,24 +34,13 @@ export default function WaitingRoompage({ step, goNext }: Props) {
         );
     });
 
-    function handlePinChange(e: React.ChangeEvent<HTMLInputElement>) {
-        const digits = e.target.value.replace(/\D/g, '').slice(0, 6);
-        setPin(digits);
-    }
-
-    function handleStart() {
-        if (pin.length < 6 || joinedCount >= 2) return;
-        setJoinedCount((count) => count + 1);
-        setPin('');
-    }
-
     function triggerStart() {
-        if (pin.length < 6 || joinedCount >= 2) return;
+        if (!session) return;
 
         setPressState('hover');
         setTimeout(() => setPressState('press'), 120);
         setTimeout(() => {
-            handleStart();
+            goNext();
             setPressState('idle');
         }, 260);
     }
@@ -96,13 +99,20 @@ export default function WaitingRoompage({ step, goNext }: Props) {
     }
 
     return (
-        <div className="relative z-0 min-h-screen w-full overflow-hidden bg-surface-gradient">
+        <div className="bg-surface-gradient relative z-0 min-h-screen w-full overflow-hidden">
+            <button
+                className="fixed bottom-36 left-4 z-50 h-8 w-[4rem] font-arsenal underline"
+                onClick={logout}
+            >
+                Log out
+            </button>
+
             {/*  BACKGROUND LAYER */}
             <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 select-none"
             >
-                <div className="z-0 h-screen w-screen bg-[#0A0C0F]" />
+                <div className="z-0 h-screen w-screen" />
 
                 {/* 1. vector — paling belakang */}
                 <div className="z-1 absolute inset-0 bg-[url('/starting-page/vector-99.svg')] bg-[length:auto_100%] bg-right bg-no-repeat" />
@@ -116,7 +126,7 @@ export default function WaitingRoompage({ step, goNext }: Props) {
 
                 {/* 3. flag*/}
                 <img
-                    src={`/starting-page/${joinedCount}-2hasjoined.svg`}
+                    src={`/starting-page/${flagIndex}-2hasjoined.svg`}
                     alt=""
                     className="absolute left-[30%] top-[-2.1%] z-[4] h-auto w-[75%]"
                 />
@@ -125,30 +135,41 @@ export default function WaitingRoompage({ step, goNext }: Props) {
                 <div className="absolute inset-0 z-[5] bg-gradient-to-r from-black/60 via-black/10 to-transparent" />
 
                 {/*  5. BOARD STATUS LEFT */}
-                {joinedCount >= 1 ? (
+                {leftCount >= 1 ? (
                     /* SIGNED: bungkus dalem relative biar nama-tim nempel ke board */
                     <div className="absolute right-[16%] top-[3%] z-[9] w-[20%]">
-                        <div className="relative w-full animate-persona-in">
+                        <div className="animate-persona-in relative w-full">
                             <img
                                 src="/starting-page/BOARD-STATUS-LEFT(SIGNED).svg"
                                 alt=""
                                 className="block h-auto w-full"
                             />
-                            {/* nama-tim wrapper: bottom/left/w relatif ke board di atas */}
-                            <div className="absolute bottom-[10%] left-[26%] w-[53%]">
-                                <img
-                                    src="/starting-page/nama-tim.svg"
-                                    alt=""
-                                    className="h-auto w-full"
-                                />
-                                <span className="absolute left-[10%] top-[15%] w-[9vw] -rotate-[9deg] font-arsenal text-[1.8vw] font-bold leading-none text-white">
-                                    NAMA
-                                    <br />
-                                    TIM 1
-                                </span>
-                                <span className="absolute left-[20%] top-[75%] w-[9vw] -rotate-[5deg] font-arsenal text-[1vw] font-bold leading-[1vw] text-white">
-                                    has joined
-                                </span>
+
+                            <p className="absolute left-1/2 top-[9%] z-20 -translate-x-1/2 whitespace-nowrap rounded bg-black/70 px-2 py-0.5 font-arsenal text-[1.4vw] font-bold text-white">
+                                {leftCount}/{maxPlayers}
+                            </p>
+
+                            {/* stack of banner slots - one per player, fills in as they join */}
+                            <div className="absolute bottom-[6%] left-[24%] flex w-[56%] flex-col gap-[0.4vw]">
+                                {Array.from({ length: maxPlayers }, (_, i) => (
+                                    <div
+                                        key={i}
+                                        className={`relative w-full transition-opacity duration-300 ${
+                                            i < leftCount
+                                                ? 'opacity-100'
+                                                : 'opacity-20'
+                                        }`}
+                                    >
+                                        <img
+                                            src="/starting-page/nama-tim.svg"
+                                            alt=""
+                                            className="h-auto w-full"
+                                        />
+                                        <span className="absolute left-[12%] top-[20%] w-[9vw] -rotate-[9deg] truncate font-arsenal text-[0.9vw] font-bold leading-none text-white">
+                                            {leftTeam?.name ?? ''}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -161,30 +182,41 @@ export default function WaitingRoompage({ step, goNext }: Props) {
                 )}
 
                 {/*  6. BOARD STATUS RIGHT  */}
-                {joinedCount >= 2 ? (
+                {rightCount >= 1 ? (
                     /* SIGNED: bungkus dalem relative biar nama-tim-kanan nempel ke board */
                     <div className="absolute right-[2%] top-[8%] z-[8] w-[25%]">
-                        <div className="relative w-full animate-persona-in">
+                        <div className="animate-persona-in relative w-full">
                             <img
                                 src="/starting-page/BOARD-STATUS-RIGHT(SIGNED).png"
                                 alt=""
                                 className="block h-auto w-full"
                             />
-                            {/* nama-tim-kanan wrapper: bottom/left/w relatif ke board di atas */}
-                            <div className="absolute bottom-[15%] left-[28%] w-[42%]">
-                                <img
-                                    src="/starting-page/nama-tim-kanan.svg"
-                                    alt=""
-                                    className="h-auto w-full"
-                                />
-                                <span className="absolute left-[10%] top-[10%] w-[9vw] rotate-[4deg] font-arsenal text-[1.8vw] font-bold leading-none text-white">
-                                    NAMA
-                                    <br />
-                                    TIM 1
-                                </span>
-                                <span className="absolute left-[20%] top-[75%] w-[9vw] rotate-[4deg] font-arsenal text-[1vw] font-bold leading-[1vw] text-white">
-                                    has joined
-                                </span>
+
+                            <p className="absolute left-1/2 top-[2%] z-20 -translate-x-1/2 whitespace-nowrap rounded bg-black/70 px-2 py-0.5 font-arsenal text-[1.4vw] font-bold text-white">
+                                {rightCount}/{maxPlayers}
+                            </p>
+
+                            {/* stack of banner slots - one per player, fills in as they join */}
+                            <div className="absolute bottom-[10%] left-[26%] flex w-[46%] flex-col gap-[0.4vw]">
+                                {Array.from({ length: maxPlayers }, (_, i) => (
+                                    <div
+                                        key={i}
+                                        className={`relative w-full transition-opacity duration-300 ${
+                                            i < rightCount
+                                                ? 'opacity-100'
+                                                : 'opacity-20'
+                                        }`}
+                                    >
+                                        <img
+                                            src="/starting-page/nama-tim-kanan.svg"
+                                            alt=""
+                                            className="h-auto w-full"
+                                        />
+                                        <span className="absolute left-[12%] top-[15%] w-[9vw] rotate-[4deg] truncate font-arsenal text-[0.9vw] font-bold leading-none text-white">
+                                            {rightTeam?.name ?? ''}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -213,7 +245,7 @@ export default function WaitingRoompage({ step, goNext }: Props) {
                             pattern="[0-9]*"
                             autoComplete="off"
                             value={pin}
-                            onChange={handlePinChange}
+                            readOnly
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
                                     e.preventDefault();
@@ -242,8 +274,9 @@ export default function WaitingRoompage({ step, goNext }: Props) {
 
                 <button
                     type="button"
-                    onClick={goNext}
-                    className={`absolute bottom-[30%] left-[25%] w-[20%] -translate-x-1/2 rotate-[2deg] cursor-pointer transition-transform duration-150 ${
+                    onClick={triggerStart}
+                    disabled={!session}
+                    className={`absolute bottom-[30%] left-[25%] w-[20%] -translate-x-1/2 rotate-[2deg] cursor-pointer transition-transform duration-150 disabled:cursor-not-allowed disabled:opacity-60 ${
                         pressState === 'hover'
                             ? 'scale-105'
                             : pressState === 'press'

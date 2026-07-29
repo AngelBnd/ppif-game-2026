@@ -1,13 +1,15 @@
 import InputBorderBottom from '@/assets/phone/InputBorderBottomSVG.svg?react';
 import InputYourCode from '@/assets/phone/inputurcode.svg?react';
-import Join from '@/assets/phone/JOIN.svg?react';
 import StreakBG from '@/assets/phone/STREAKBG.svg?react';
+import type { SessionInfo } from '@/types/gameSession';
+import type { Step } from '@/types/step';
+import gsap from 'gsap';
 import { useRef, useState } from 'react';
-import type { PlayerFlowStep } from '../../data/playerGameFlow';
 
 type Props = {
-    step: PlayerFlowStep;
-    goNext: () => void;
+    step: Step;
+    onPeek: (code: string) => Promise<SessionInfo>;
+    onJoin: (code: string, teamId: number) => Promise<unknown>;
 };
 
 type CodeInputProps = {
@@ -24,8 +26,9 @@ function CodeInput({ length = 6, onComplete, inputBgRefs }: CodeInputProps) {
         e: React.ChangeEvent<HTMLInputElement>,
         index: number,
     ) => {
-        const inputValue = e.target.value;
-        const char = inputValue.slice(-1).toUpperCase();
+        const char = e.target.value.slice(-1);
+
+        if (char && !/[0-9]/.test(char)) return;
 
         const newValues = [...values];
         newValues[index] = char;
@@ -56,8 +59,8 @@ function CodeInput({ length = 6, onComplete, inputBgRefs }: CodeInputProps) {
 
         const pasted = e.clipboardData
             .getData('text')
+            .replace(/[^0-9]/g, '')
             .slice(0, length)
-            .toUpperCase()
             .split('');
 
         const newValues = Array(length).fill('');
@@ -96,6 +99,9 @@ function CodeInput({ length = 6, onComplete, inputBgRefs }: CodeInputProps) {
                         }}
                         value={value}
                         maxLength={1}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        autoComplete="off"
                         onChange={(e) => handleChange(e, index)}
                         onKeyDown={(e) => handleKeyDown(e, index)}
                         onPaste={handlePaste}
@@ -109,16 +115,60 @@ function CodeInput({ length = 6, onComplete, inputBgRefs }: CodeInputProps) {
     );
 }
 
-export default function JoinRoomPage({ step, goNext }: Props) {
+export default function JoinRoomPage({ onPeek, onJoin }: Props) {
     const [uniqueCode, setUniqueCode] = useState('');
+    const [teams, setTeams] = useState<SessionInfo['teams'] | null>(null);
+    const [maxPlayersPerTeam, setMaxPlayersPerTeam] = useState(3);
+    const [isChecking, setIsChecking] = useState(false);
+    const [isJoining, setIsJoining] = useState(false);
     const [error, setError] = useState('');
+    const [joined, setJoined] = useState(false);
 
     const formRef = useRef<HTMLDivElement | null>(null);
     const inputBgRefs = useRef<Array<HTMLDivElement | null>>([]);
 
-    const handleJoin = async () => {
+    const shakeForm = () => {
+        if (!formRef.current) return;
+
+        gsap.fromTo(
+            formRef.current,
+            { x: 0 },
+            {
+                x: 14,
+                duration: 0.06,
+                repeat: 5,
+                yoyo: true,
+                ease: 'power2.inOut',
+                onComplete: () => {
+                    gsap.set(formRef.current, { x: 0 });
+                },
+            },
+        );
+    };
+
+    const handleCodeComplete = async (value: string) => {
+        setUniqueCode(value);
+        setError('');
+        setIsChecking(true);
+
+        try {
+            const info = await onPeek(value);
+            setTeams(info.teams);
+            setMaxPlayersPerTeam(info.max_players_per_team);
+        } catch {
+            setError('Invalid unique code.');
+            shakeForm();
+        } finally {
+            setIsChecking(false);
+        }
+    };
+
+    const handleChooseTeam = async (teamId: number) => {
+        setIsJoining(true);
+
         try {
             setError('');
+            await onJoin(uniqueCode, teamId);
 
             const inputBgs = inputBgRefs.current.filter(Boolean);
 
@@ -136,59 +186,87 @@ export default function JoinRoomPage({ step, goNext }: Props) {
                     yoyo: true,
                     ease: 'power2.inOut',
                     onComplete: () => {
-                        // onJoined();
+                        setJoined(true);
                     },
                 },
             );
-        } catch (error) {
-            setError('Invalid unique code.');
-
-            if (formRef.current) {
-                gsap.fromTo(
-                    formRef.current,
-                    { x: 0 },
-                    {
-                        x: 14,
-                        duration: 0.06,
-                        repeat: 5,
-                        yoyo: true,
-                        ease: 'power2.inOut',
-                        onComplete: () => {
-                            gsap.set(formRef.current, { x: 0 });
-                        },
-                    },
-                );
-            }
+        } catch (err) {
+            setError((err as Error).message || 'Failed to join.');
+            shakeForm();
+        } finally {
+            setIsJoining(false);
         }
     };
 
+    if (joined) {
+        return (
+            <main className="flex min-h-screen items-center justify-center text-white">
+                <p className="font-arsenal text-xl font-semibold">
+                    You're in! Waiting for the admin to start...
+                </p>
+            </main>
+        );
+    }
+
     return (
         <main className="relative flex min-h-screen items-center justify-center overflow-hidden text-white">
-            <div className="relative z-10 flex h-screen w-full flex-col items-center">
-                <div className="mt-[18vh]">
+            <div
+                ref={formRef}
+                className="relative z-10 flex h-screen w-full flex-col items-center"
+            >
+                <div className="mt-[14vh]">
                     <InputYourCode className="w-[20em] rotate-[-8deg]" />
                 </div>
 
-                <div className="relative mt-10 h-[2rem] w-[29rem]">
-                    <StreakBG className="absolute left-1/2 top-1/2 w-[40rem] -translate-x-1/2 -translate-y-1/2 object-cover" />
-                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 -rotate-12">
+                <div className="relative mt-10 flex h-[3rem] w-full flex-col items-center justify-center">
+                    <StreakBG className="absolute left-1/2 top-1/2 w-full -translate-x-1/2 -translate-y-1/2 object-cover" />
+                    <div className="relative">
                         <CodeInput
-                            length={5}
+                            length={6}
                             inputBgRefs={inputBgRefs}
-                            onComplete={(value) => {
-                                setUniqueCode(value);
-                                setError('');
-                            }}
+                            onComplete={handleCodeComplete}
                         />
                     </div>
+
+                    {error && (
+                        <p className="relative mt-8 font-arsenal text-sm font-semibold text-red-400">
+                            {error}
+                        </p>
+                    )}
                 </div>
 
-                <button
-                    onClick={goNext}
-                    className="mt-32 transition-transform hover:scale-105 active:scale-95"
-                >
-                    <Join className="w-[24rem]" />
-                </button>
+                {isChecking && (
+                    <p className="mt-6 text-sm text-white/60">
+                        Mengecek kode...
+                    </p>
+                )}
+
+                {teams && (
+                    <div className="mt-10 flex w-64 flex-col gap-3">
+                        {teams.map((team) => {
+                            const isFull =
+                                team.players.length >= maxPlayersPerTeam;
+
+                            return (
+                                <button
+                                    key={team.id}
+                                    onClick={() => handleChooseTeam(team.id)}
+                                    disabled={isFull || isJoining}
+                                    className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-black transition-transform hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                    <span className="font-semibold">
+                                        {team.name}
+                                    </span>
+                                    <span className="text-sm text-black/60">
+                                        {isFull
+                                            ? 'Penuh'
+                                            : `${team.players.length}/${maxPlayersPerTeam}`}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
         </main>
     );

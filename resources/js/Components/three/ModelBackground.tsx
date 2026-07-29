@@ -59,10 +59,19 @@ export default function ModelBackground({
         lookAtRef.current.set(...initialPreset.lookAt);
         camera.lookAt(lookAtRef.current);
 
-        const renderer = new THREE.WebGLRenderer({
-            antialias: true,
-            alpha: true,
-        });
+        // Safari/iOS (esp. Low Power Mode) can refuse to create a WebGL
+        // context. THREE throws synchronously when that happens - without
+        // this guard the whole app used to unmount to a blank white page.
+        let renderer: THREE.WebGLRenderer;
+        try {
+            renderer = new THREE.WebGLRenderer({
+                antialias: true,
+                alpha: true,
+            });
+        } catch (err) {
+            console.error('WebGL unavailable, skipping 3D background:', err);
+            return;
+        }
 
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
