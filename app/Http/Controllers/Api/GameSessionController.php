@@ -9,6 +9,7 @@ use App\Http\Resources\GameSessionResource;
 use App\Models\GameSession;
 use App\Models\Player;
 use App\Models\Team;
+use App\Rules\CleanNickname;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -28,7 +29,13 @@ class GameSessionController extends Controller
     {
         $validated = $request->validate([
             'team_id' => ['required', 'integer'],
-            'nickname' => ['required', 'string', 'max:255'],
+            'nickname' => [
+                'required',
+                'string',
+                'max:24',
+                'regex:/^[\pL\pN ._-]+$/u',
+                new CleanNickname,
+            ],
         ]);
 
         $session = GameSession::where('code', $code)->firstOrFail();

@@ -8,11 +8,10 @@ export type TeamInfo = {
     number: number | null;
     score: number;
     hp: number;
-    players: { id: number; nickname: string }[];
+    players: { nickname: string }[];
 };
 
 export type SessionInfo = {
-    id: number;
     code: string;
     class_name: string | null;
     status: 'waiting' | 'active' | 'finished';
