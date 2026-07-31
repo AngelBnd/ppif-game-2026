@@ -16,7 +16,7 @@ class GameSession extends Model
      * triggers the scripted "impossible to win" cutscene instead of a
      * normal phase transition. Placeholder numbers - tune freely.
      */
-    public const BOSS_PHASE_MAX_HP = [1 => 10, 2 => 180, 3 => 300];
+    public const BOSS_PHASE_MAX_HP = [1 => 120, 2 => 180, 3 => 300];
 
     public const BOSS_PHASE3_CUTSCENE_THRESHOLD = 15;
 

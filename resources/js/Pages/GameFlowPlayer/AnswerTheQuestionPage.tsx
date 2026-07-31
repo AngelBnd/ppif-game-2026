@@ -19,8 +19,11 @@ type Props = {
 };
 
 // Index -> shape, matches the same order used on the monitor's PILIHAN
-// GANDA display so "Square" means the same option on both screens.
-const OPTION_ICONS = [PinkSquare, RedCircle, GreenTriangle, BlueX];
+// GANDA display (Square, Circle, Cross, Triangle) so "Square" means the
+// same option on both screens - idx 2/3 (the bottom row) were swapped
+// here relative to the monitor, so players tapping the shape they saw
+// announced on the shared screen were hitting the wrong option.
+const OPTION_ICONS = [PinkSquare, RedCircle, BlueX, GreenTriangle];
 
 export default function AnswerTheQuestionPage({
     step,

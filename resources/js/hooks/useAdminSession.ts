@@ -86,6 +86,14 @@ export function useAdminSession(enabled: boolean) {
                     boss_phase: payload.boss_phase,
                     boss_hp: payload.boss_hp,
                     boss_hp_max: payload.boss_hp_max,
+                    // The admin never taps, so this broadcast is the only
+                    // way it can learn the fight is over - without this,
+                    // boss_finished_at stayed null forever and the "boss
+                    // defeated" screen never showed, even though the fight
+                    // had actually ended server-side.
+                    boss_finished_at: payload.cutscene
+                        ? new Date().toISOString()
+                        : current.boss_finished_at,
                     teams: current.teams.map((t) =>
                         t.id === payload.team_id
                             ? { ...t, hp: payload.team_hp }

@@ -43,38 +43,41 @@ export default function BossFightPage({ step, session }: Props) {
     const prevPhaseRef = useRef<number | undefined>(undefined);
     const phaseBannerRef = useRef<HTMLDivElement>(null);
 
+    // Banner timer keyed ONLY on phase - it used to also depend on
+    // boss_hp/boss_hp_max, so every in-phase tap (every ~300ms while
+    // anyone's tapping) cancelled the pending clear via the effect
+    // cleanup and never rescheduled it, leaving the banner stuck on
+    // screen for the rest of the fight.
     useEffect(() => {
         const phase = session?.boss_phase;
-        const hp = session?.boss_hp;
-        const hpMax = session?.boss_hp_max;
-        if (phase === undefined || hp === undefined || hpMax === undefined)
-            return;
+        if (phase === undefined) return;
 
         if (prevPhaseRef.current === undefined) {
-            // Initial load - nothing to transition from, snap immediately.
             prevPhaseRef.current = phase;
-            setDisplayedHp(hp);
-            setDisplayedHpMax(hpMax);
             return;
         }
 
-        if (phase !== prevPhaseRef.current) {
-            prevPhaseRef.current = phase;
-            setPhaseBanner(phase);
+        if (phase === prevPhaseRef.current) return;
 
-            const timeout = setTimeout(() => {
-                setDisplayedHp(hp);
-                setDisplayedHpMax(hpMax);
-                setPhaseBanner(null);
-            }, 5000);
+        prevPhaseRef.current = phase;
+        setPhaseBanner(phase);
 
-            return () => clearTimeout(timeout);
-        }
+        const timeout = setTimeout(() => setPhaseBanner(null), 5000);
+        return () => clearTimeout(timeout);
+    }, [session?.boss_phase]);
 
-        // Same phase - just HP ticking down, reflect it live.
+    // Live HP display - held at its last value while the banner is up
+    // (phaseBanner !== null), then snaps to whatever's current the moment
+    // the banner clears above.
+    useEffect(() => {
+        const hp = session?.boss_hp;
+        const hpMax = session?.boss_hp_max;
+        if (hp === undefined || hpMax === undefined) return;
+        if (phaseBanner !== null) return;
+
         setDisplayedHp(hp);
         setDisplayedHpMax(hpMax);
-    }, [session?.boss_phase, session?.boss_hp, session?.boss_hp_max]);
+    }, [session?.boss_hp, session?.boss_hp_max, phaseBanner]);
 
     useEffect(() => {
         if (phaseBanner === null || !phaseBannerRef.current) return;

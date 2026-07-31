@@ -16,7 +16,6 @@ class GameSessionResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
             'code' => $this->code,
             'class_name' => $this->class_name,
             'status' => $this->status,
@@ -42,7 +41,6 @@ class GameSessionResource extends JsonResource
                     'hp' => $team->hp,
                     'players' => $team->relationLoaded('players')
                         ? $team->players->map(fn ($player) => [
-                            'id' => $player->id,
                             'nickname' => $player->nickname,
                         ])
                         : [],
