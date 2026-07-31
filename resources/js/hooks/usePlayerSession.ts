@@ -65,6 +65,14 @@ export function usePlayerSession() {
                 boss_phase: payload.boss_phase,
                 boss_hp: payload.boss_hp,
                 boss_hp_max: payload.boss_hp_max,
+                // Only the device whose own tap crossed the cutscene
+                // threshold learns via its submitBossTap() response - every
+                // other player only ever hears about it through this
+                // broadcast, so without this their screen never left phase
+                // 3 even after the fight was actually over.
+                boss_finished_at: payload.cutscene
+                    ? new Date().toISOString()
+                    : current.boss_finished_at,
                 teams: current.teams.map((t) =>
                     t.id === payload.team_id ? { ...t, hp: payload.team_hp } : t,
                 ),
