@@ -70,7 +70,10 @@ class SecurityHeaders
             "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
             "font-src 'self' https://fonts.bunny.net",
             "img-src 'self' data: blob:",
-            "connect-src 'self' https://fonts.bunny.net {$wsConnect}",
+            // blob: is needed here (not just img-src) because GLTFLoader's
+            // embedded textures get fetch()'d from a blob: URL it creates
+            // itself - img-src only covers <img>/CSS url(), not fetch/XHR.
+            "connect-src 'self' https://fonts.bunny.net blob: {$wsConnect}",
             "media-src 'self'",
             "worker-src 'self' blob:",
             "object-src 'none'",
