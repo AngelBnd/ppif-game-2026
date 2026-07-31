@@ -523,6 +523,7 @@ export default function JoinRoomPage({ onPeek, onJoin }: Props) {
                             maxLength={30}
                             placeholder="Input Nickname Anda"
                             wrapperClassName="mt-3"
+                            autoComplete="off"
                         />
                         <Button Icon={JoinSVG} onClick={handleJoinClick} />
                     </div>

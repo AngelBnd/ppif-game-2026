@@ -206,8 +206,6 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
     }, []);
 
     useEffect(() => {
-        if (correctIdx === -1) return;
-
         if (timeIsUp) {
             setFinish(true);
             return;
@@ -219,7 +217,7 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
             const timeout = setTimeout(() => setFinish(true), 4000);
             return () => clearTimeout(timeout);
         }
-    }, [timeIsUp, correctIdx, answeredCount]);
+    }, [timeIsUp, answeredCount]);
 
     // Ticking clock plays for the duration of each question, stopping the
     // moment it's resolved (time up, or both teams answered + the reveal
@@ -293,36 +291,39 @@ export default function AnswerTheQuestionPage({ step, session }: Props) {
     }, [answeredCount, finish]);
 
     useEffect(() => {
-        if (finish) {
-            const correctEl = optionRefs.current[correctIdx];
-            if (!correctEl) return;
+        if (!finish) return;
 
-            optionsWaveTlRef.current?.kill();
-            const ctx = gsap.context(() => {
-                gsap.to(optionRefs.current.filter(Boolean), {
-                    scale: 1,
+        // Always stop the idle wave and settle every option, even if the
+        // correct one can't be identified (stale/mismatched content) - so
+        // the options only ever fail to *highlight*, never keep wobbling
+        // forever like the quiz is still stuck mid-question.
+        optionsWaveTlRef.current?.kill();
+        const ctx = gsap.context(() => {
+            gsap.to(optionRefs.current.filter(Boolean), {
+                scale: 1,
+                rotate: 0,
+                duration: 0.3,
+                ease: 'power2.out',
+                onComplete: () => {
+                    const correctEl = optionRefs.current[correctIdx];
+                    if (!correctEl) return;
 
-                    rotate: 0,
-                    duration: 0.3,
-                    ease: 'power2.out',
-                    onComplete: () => {
-                        gsap.fromTo(
-                            correctEl,
-                            { scale: 1 },
-                            {
-                                scale: 1.04,
-                                duration: 0.9,
-                                repeat: -1,
-                                yoyo: true,
-                                ease: 'sine.inOut',
-                            },
-                        );
-                    },
-                });
-            }, containerRef);
+                    gsap.fromTo(
+                        correctEl,
+                        { scale: 1 },
+                        {
+                            scale: 1.04,
+                            duration: 0.9,
+                            repeat: -1,
+                            yoyo: true,
+                            ease: 'sine.inOut',
+                        },
+                    );
+                },
+            });
+        }, containerRef);
 
-            return () => ctx.revert();
-        }
+        return () => ctx.revert();
     }, [finish]);
 
     return (
