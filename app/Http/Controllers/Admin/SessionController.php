@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Events\BossPhaseStarted;
+use App\Events\PlayerLeft;
 use App\Events\StepAdvanced;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\GameSessionResource;
 use App\Models\GameSession;
 use App\Models\LeaderboardEntry;
+use App\Models\Player;
 use App\Models\Step;
 use App\Models\StepProgress;
 use App\Models\Team;
@@ -27,7 +30,7 @@ class SessionController extends Controller
 
     /**
      * @return array{0: ?string, 1: string} [group number, group name] - number
-     * is null when no group number was given, in which case name is $fallback.
+     *                                      is null when no group number was given, in which case name is $fallback.
      */
     private function teamName(?string $groupNumber, string $fallback): array
     {
@@ -59,7 +62,7 @@ class SessionController extends Controller
         $session = DB::transaction(function () use ($validated, $firstStep, $groupNumbers, $userId) {
             $session = GameSession::create([
                 'user_id' => $userId,
-                'code' => $this->generateUniqueCode(),
+                'code' => GameSession::generateUniqueCode(),
                 'class_name' => $validated['class_name'] ?? null,
                 'status' => 'waiting',
                 'current_step_id' => $firstStep->id,
@@ -111,7 +114,7 @@ class SessionController extends Controller
      */
     public function advance(Request $request, string $code)
     {
-        $session = GameSession::where('code', $code)->with('currentStep')->firstOrFail();
+        $session = GameSession::whereCode($code)->with('currentStep')->firstOrFail();
 
         abort_unless(
             $session->user_id === $request->user()->id || $request->user()->is_admin,
@@ -155,6 +158,9 @@ class SessionController extends Controller
                 $session->update([
                     'boss_phase' => 1,
                     'boss_hp' => GameSession::BOSS_PHASE_MAX_HP[1],
+                    // Paused on arrival: even phase 1 waits for the PIC's
+                    // START press, so the fight never begins on its own.
+                    'boss_phase_started_at' => null,
                     'boss_finished_at' => null,
                 ]);
 
@@ -164,6 +170,80 @@ class SessionController extends Controller
 
         $session = $session->fresh(['teams.players', 'currentStep']);
         event(new StepAdvanced($session));
+
+        return response()->json([
+            'data' => $this->withCorrectAnswer($session, $request),
+        ]);
+    }
+
+    /**
+     * Un-pause the boss fight's current phase. The fight is deliberately
+     * inert until the PIC presses START - once for phase 1, and again after
+     * each phase is cleared - so the module leads the pacing instead of the
+     * players rolling straight from one phase into the next.
+     */
+    public function startBossPhase(Request $request, string $code)
+    {
+        $session = GameSession::whereCode($code)->with('currentStep')->firstOrFail();
+
+        abort_unless(
+            $session->user_id === $request->user()->id || $request->user()->is_admin,
+            403,
+            'This is not your session.',
+        );
+
+        abort_if(
+            $session->currentStep?->type !== 'boss',
+            422,
+            'Current step is not the boss fight.',
+        );
+
+        abort_if($session->boss_finished_at !== null, 409, 'Boss fight already over.');
+
+        // Idempotent: a double-press (or a second PIC device) just gets the
+        // current state back instead of restarting the phase's clock.
+        if ($session->boss_phase_started_at === null) {
+            $session->update(['boss_phase_started_at' => now()]);
+
+            event(new BossPhaseStarted($session));
+        }
+
+        $session = $session->fresh(['teams.players', 'currentStep']);
+
+        return response()->json([
+            'data' => $this->withCorrectAnswer($session, $request),
+        ]);
+    }
+
+    /**
+     * Remove one player from a team, freeing their slot under
+     * MAX_PLAYERS_PER_TEAM.
+     *
+     * Joining needs nothing but a session code and a nickname, and there are
+     * only six slots in a room, so a script can take all of them in under a
+     * second. Leaving requires the squatter's own device_token, which they
+     * simply won't send - before this the only remedy was destroy(), which
+     * takes the session's teams, players, answers and leaderboard rows with
+     * it and forces a new code out to the room mid-event.
+     */
+    public function removePlayer(Request $request, string $code, int $player)
+    {
+        $session = GameSession::whereCode($code)->firstOrFail();
+
+        abort_unless(
+            $session->user_id === $request->user()->id || $request->user()->is_admin,
+            403,
+            'This is not your session.',
+        );
+
+        $player = Player::whereKey($player)
+            ->whereHas('team', fn ($query) => $query->where('game_session_id', $session->id))
+            ->firstOrFail();
+
+        $player->delete();
+
+        $session = $session->fresh(['teams.players', 'currentStep']);
+        event(new PlayerLeft($session));
 
         return response()->json([
             'data' => $this->withCorrectAnswer($session, $request),
@@ -192,7 +272,7 @@ class SessionController extends Controller
      */
     public function destroy(Request $request, string $code)
     {
-        $session = GameSession::where('code', $code)->firstOrFail();
+        $session = GameSession::whereCode($code)->firstOrFail();
 
         abort_unless(
             $session->user_id === $request->user()->id || $request->user()->is_admin,
@@ -238,14 +318,5 @@ class SessionController extends Controller
             'sessions' => $sessions,
             'leaderboard' => $leaderboard,
         ]);
-    }
-
-    private function generateUniqueCode(): string
-    {
-        do {
-            $code = (string) random_int(100000, 999999);
-        } while (GameSession::where('code', $code)->exists());
-
-        return $code;
     }
 }

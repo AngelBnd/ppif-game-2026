@@ -46,9 +46,12 @@ function CodeInput({ length = 6, onComplete, inputBgRefs }: CodeInputProps) {
         e: React.ChangeEvent<HTMLInputElement>,
         index: number,
     ) => {
-        const char = e.target.value.slice(-1);
+        // Codes are letters and digits now, not just digits - see
+        // GameSession::CODE_ALPHABET for why. They're issued uppercase, so
+        // fold the input rather than making anyone find the shift key.
+        const char = e.target.value.slice(-1).toUpperCase();
 
-        if (char && !/[0-9]/.test(char)) return;
+        if (char && !/[A-Z0-9]/.test(char)) return;
 
         const newValues = [...values];
         newValues[index] = char;
@@ -79,7 +82,8 @@ function CodeInput({ length = 6, onComplete, inputBgRefs }: CodeInputProps) {
 
         const pasted = e.clipboardData
             .getData('text')
-            .replace(/[^0-9]/g, '')
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, '')
             .slice(0, length)
             .split('');
 
@@ -119,9 +123,12 @@ function CodeInput({ length = 6, onComplete, inputBgRefs }: CodeInputProps) {
                         }}
                         value={value}
                         maxLength={1}
-                        inputMode="numeric"
-                        pattern="[0-9]*"
+                        inputMode="text"
+                        pattern="[A-Za-z0-9]*"
                         autoComplete="off"
+                        autoCapitalize="characters"
+                        autoCorrect="off"
+                        spellCheck={false}
                         onChange={(e) => handleChange(e, index)}
                         onKeyDown={(e) => handleKeyDown(e, index)}
                         onPaste={handlePaste}

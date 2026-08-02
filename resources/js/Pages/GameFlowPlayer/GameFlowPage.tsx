@@ -57,7 +57,15 @@ export default function PlayerFlowPage() {
         }
     }, [session?.current_step?.slug, stepId, navigate]);
 
-    const step = steps.find((item) => item.slug === stepId);
+    const listedStep = steps.find((item) => item.slug === stepId);
+
+    // /api/steps ships the flow without question content so it can't be read
+    // ahead of time; the live question arrives with the session, for whatever
+    // step the room is actually on. Prefer that copy when the two agree.
+    const step =
+        listedStep && session?.current_step?.slug === listedStep.slug
+            ? session.current_step
+            : listedStep;
 
     const sortedSteps = [...steps].sort((a, b) => a.order - b.order);
     const currentIndex = sortedSteps.findIndex((item) => item.slug === stepId);

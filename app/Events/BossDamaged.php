@@ -39,6 +39,9 @@ class BossDamaged implements ShouldBroadcastNow, ShouldRescue
             'boss_phase' => $this->session->boss_phase,
             'boss_hp' => $this->session->boss_hp,
             'boss_hp_max' => $this->session->bossPhaseMaxHp(),
+            // Null once a phase is cleared: the fight pauses there until the
+            // PIC presses START again, which is what re-arms every client.
+            'boss_phase_started_at' => $this->session->boss_phase_started_at?->toISOString(),
             'phase_changed' => $this->phaseChanged,
             'cutscene' => $this->cutscene,
             'team_id' => $this->team->id,
