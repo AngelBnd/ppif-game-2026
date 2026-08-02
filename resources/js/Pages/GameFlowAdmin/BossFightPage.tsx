@@ -23,71 +23,64 @@ const TEAM_CONTRIBUTION_MAX = 900;
 type Props = {
     step: Step;
     session: SessionInfo | null;
+    onStartPhase: () => Promise<SessionInfo>;
 };
 
-export default function BossFightPage({ step, session }: Props) {
+export default function BossFightPage({ step, session, onStartPhase }: Props) {
     const containerRef = useRef<HTMLElement>(null);
     const isFinished = session?.boss_finished_at != null;
 
-    // The HP bar shown on screen lags behind the live session state on a
-    // phase change - held at the old phase's numbers for 5s (with the
-    // "PHASE N" banner up) before snapping to the new phase, instead of the
-    // bar instantly jumping the moment the triggering tap lands server-side.
-    // Regular in-phase HP ticks still update immediately, no delay.
+    // Every phase sits paused until the PIC presses START below - both on
+    // arrival at the boss step (phase 1) and after each cleared phase.
+    const phaseStarted = session?.boss_phase_started_at != null;
+    const [isStarting, setIsStarting] = useState(false);
+    const [startError, setStartError] = useState(false);
+    const [pressState, setPressState] = useState<'idle' | 'press'>('idle');
+
+    // The HP bar shown on screen lags behind the live session state across a
+    // phase change - held at the old phase's numbers for as long as the
+    // fight is paused, so it doesn't jump to the next phase's full bar the
+    // instant the clearing tap lands server-side. It snaps to the new phase
+    // when the PIC starts it. Regular in-phase HP ticks update immediately.
     const [displayedHp, setDisplayedHp] = useState(session?.boss_hp ?? 0);
     const [displayedHpMax, setDisplayedHpMax] = useState(
         session?.boss_hp_max ?? 1,
     );
 
-    const [phaseBanner, setPhaseBanner] = useState<number | null>(null);
-    const prevPhaseRef = useRef<number | undefined>(undefined);
-    const phaseBannerRef = useRef<HTMLDivElement>(null);
+    const phaseGateRef = useRef<HTMLDivElement>(null);
 
-    // Banner timer keyed ONLY on phase - it used to also depend on
-    // boss_hp/boss_hp_max, so every in-phase tap (every ~300ms while
-    // anyone's tapping) cancelled the pending clear via the effect
-    // cleanup and never rescheduled it, leaving the banner stuck on
-    // screen for the rest of the fight.
-    useEffect(() => {
-        const phase = session?.boss_phase;
-        if (phase === undefined) return;
-
-        if (prevPhaseRef.current === undefined) {
-            prevPhaseRef.current = phase;
-            return;
-        }
-
-        if (phase === prevPhaseRef.current) return;
-
-        prevPhaseRef.current = phase;
-        setPhaseBanner(phase);
-
-        const timeout = setTimeout(() => setPhaseBanner(null), 5000);
-        return () => clearTimeout(timeout);
-    }, [session?.boss_phase]);
-
-    // Live HP display - held at its last value while the banner is up
-    // (phaseBanner !== null), then snaps to whatever's current the moment
-    // the banner clears above.
     useEffect(() => {
         const hp = session?.boss_hp;
         const hpMax = session?.boss_hp_max;
         if (hp === undefined || hpMax === undefined) return;
-        if (phaseBanner !== null) return;
+        if (!phaseStarted) return;
 
         setDisplayedHp(hp);
         setDisplayedHpMax(hpMax);
-    }, [session?.boss_hp, session?.boss_hp_max, phaseBanner]);
+    }, [session?.boss_hp, session?.boss_hp_max, phaseStarted]);
 
     useEffect(() => {
-        if (phaseBanner === null || !phaseBannerRef.current) return;
+        if (phaseStarted || isFinished || !phaseGateRef.current) return;
 
         gsap.fromTo(
-            phaseBannerRef.current,
+            phaseGateRef.current,
             { scale: 0.5, autoAlpha: 0 },
             { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(2)' },
         );
-    }, [phaseBanner]);
+    }, [phaseStarted, isFinished]);
+
+    const handleStartPhase = () => {
+        if (isStarting) return;
+
+        setIsStarting(true);
+        setStartError(false);
+        setPressState('press');
+        setTimeout(() => setPressState('idle'), 160);
+
+        onStartPhase()
+            .catch(() => setStartError(true))
+            .finally(() => setIsStarting(false));
+    };
 
     const codieRef = useRef<HTMLDivElement>(null);
     const thingRef = useRef<HTMLDivElement>(null);
@@ -412,20 +405,52 @@ export default function BossFightPage({ step, session }: Props) {
                 ))}
             </div>
 
-            {phaseBanner !== null && !isFinished && (
+            {/* PLACEHOLDER styling - frontend team to restyle. The gate
+                itself is functional: nothing in the fight moves until the
+                PIC presses START, once per phase.
+
+                z-46 sits above the fight visuals and the "defeated" overlay
+                but below the Next / Clear Session buttons (z-50), so the PIC
+                can still advance or bail out while a phase is paused. */}
+            {!phaseStarted && !isFinished && (
                 <div
-                    ref={phaseBannerRef}
-                    className="pointer-events-none absolute inset-0 z-[70] flex justify-center"
+                    ref={phaseGateRef}
+                    className="absolute inset-0 z-[46] flex justify-center"
                 >
-                    <div className="absolute inset-0 z-20 h-screen w-screen bg-[#0A0C0F] opacity-60" />
-                    <div className="absolute top-1/2 z-50 flex -translate-y-1/2 flex-col gap-3">
-                        <p className="relative text-6xl font-bold text-red-400">
-                            PHASE {phaseBanner}
+                    <div className="absolute inset-0 z-20 h-screen w-screen bg-[#0A0C0F] opacity-80" />
+                    <div className="absolute top-1/2 z-50 flex -translate-y-1/2 flex-col items-center gap-4">
+                        <p className="font-noto text-6xl font-bold text-red-400">
+                            {session?.boss_phase === 3
+                                ? 'FINAL PHASE'
+                                : `PHASE ${session?.boss_phase ?? 1}`}
                         </p>
-                        <p className="= relative rounded">
-                            Ini masih placeholder, nanti bakal ada animasi yang
-                            berjalan 5 detik ya
+                        <p className="font-arsenal text-lg text-white/60">
+                            Peserta sedang menunggu - tekan START untuk memulai
+                            phase ini.
                         </p>
+
+                        <button
+                            type="button"
+                            onClick={handleStartPhase}
+                            disabled={isStarting || !session}
+                            className={`mt-2 w-[18rem] rotate-[2deg] cursor-pointer transition-transform duration-150 disabled:cursor-not-allowed disabled:opacity-60 ${
+                                pressState === 'press'
+                                    ? 'scale-90'
+                                    : 'hover:scale-105 active:scale-90'
+                            }`}
+                        >
+                            <img
+                                src="/starting-page/START_TEXT.svg"
+                                alt="Start"
+                                className="pointer-events-none h-auto w-full"
+                            />
+                        </button>
+
+                        {startError && (
+                            <p className="font-arsenal text-sm text-red-400">
+                                Gagal memulai phase - coba tekan START lagi.
+                            </p>
+                        )}
                     </div>
                 </div>
             )}

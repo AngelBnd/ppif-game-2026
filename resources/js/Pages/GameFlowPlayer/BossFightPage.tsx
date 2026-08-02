@@ -40,9 +40,12 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
     // Placeholder instructional overlay ("offer informative feedback" before
     // asking players to act) - frontend to restyle/animate this later.
     const [showIntro, setShowIntro] = useState(true);
-    const [phaseBanner, setPhaseBanner] = useState<number | null>(null);
-    const prevPhaseRef = useRef<number | undefined>(undefined);
-    const phaseBannerRef = useRef<HTMLDivElement>(null);
+    const phaseGateRef = useRef<HTMLDivElement>(null);
+
+    // The fight is paused - on arrival and after every cleared phase - until
+    // the PIC presses START on the monitor. Taps don't count while paused
+    // (the server rejects them too, see BossFightController@tap).
+    const phaseStarted = session?.boss_phase_started_at != null;
 
     const bossHp = session?.boss_hp ?? 0;
     const bossHpMax = session?.boss_hp_max ?? 1;
@@ -57,39 +60,28 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
         if (session?.boss_finished_at) setCutscene(true);
     }, [session?.boss_finished_at]);
 
-    // Flash "PHASE N" whenever the boss's phase changes - either from this
-    // device's own tap batch or from another player's/team's, via the
-    // shared session state (Echo-synced in usePlayerSession).
+    // Whatever was still queued when the phase ended is dropped rather than
+    // carried into the next one - those taps belong to a phase that's over.
     useEffect(() => {
-        const phase = session?.boss_phase;
-        if (phase === undefined) return;
-
-        if (
-            prevPhaseRef.current !== undefined &&
-            phase !== prevPhaseRef.current
-        ) {
-            setPhaseBanner(phase);
-            const timeout = setTimeout(() => setPhaseBanner(null), 5000);
-            prevPhaseRef.current = phase;
-            return () => clearTimeout(timeout);
-        }
-
-        prevPhaseRef.current = phase;
-    }, [session?.boss_phase]);
+        if (phaseStarted) return;
+        pendingTapsRef.current = 0;
+    }, [phaseStarted]);
 
     useEffect(() => {
-        if (phaseBanner === null || !phaseBannerRef.current) return;
+        if (phaseStarted || isFinished || !phaseGateRef.current) return;
 
         gsap.fromTo(
-            phaseBannerRef.current,
+            phaseGateRef.current,
             { scale: 0.5, autoAlpha: 0 },
             { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(2)' },
         );
-    }, [phaseBanner]);
+    }, [phaseStarted, isFinished]);
 
     useEffect(() => {
         const interval = setInterval(() => {
-            if (pendingTapsRef.current === 0 || isFinished) return;
+            if (pendingTapsRef.current === 0 || isFinished || !phaseStarted) {
+                return;
+            }
 
             const taps = Math.min(pendingTapsRef.current, 50);
             // Only drop what's actually being sent - a burst over 50
@@ -105,7 +97,7 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
         }, TAP_FLUSH_INTERVAL_MS);
 
         return () => clearInterval(interval);
-    }, [onTap, isFinished]);
+    }, [onTap, isFinished, phaseStarted]);
     const codieRef = useRef<HTMLDivElement>(null);
     const streakRef = useRef<HTMLDivElement>(null);
     const thingRef = useRef<HTMLDivElement>(null);
@@ -252,8 +244,10 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
         return () => ctx.revert();
     }, []);
 
+    // Guarded on phaseStarted too: the intro is only rendered once the
+    // fight is live, so its refs are null while the gate is up.
     useLayoutEffect(() => {
-        if (!showIntro) return;
+        if (!showIntro || !phaseStarted) return;
 
         const ctx = gsap.context(() => {
             gsap.set(introLightingRef.current, {
@@ -299,10 +293,10 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
         }, containerRef);
 
         return () => ctx.revert();
-    }, [showIntro]);
+    }, [showIntro, phaseStarted]);
 
     const handleFireTap = () => {
-        if (isFinished) return;
+        if (isFinished || !phaseStarted) return;
 
         // First tap doubles as "dismiss the instructions" - still counts
         // toward the boss's HP, no wasted tap.
@@ -394,25 +388,29 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
                     </div>
                 </div>
 
-                {phaseBanner !== null && !isFinished && (
+                {/* PLACEHOLDER styling - frontend team to restyle. Shown
+                    whenever the fight is waiting on the PIC's START press:
+                    before phase 1, and again after each cleared phase. */}
+                {!phaseStarted && !isFinished && (
                     <div
-                        ref={phaseBannerRef}
+                        ref={phaseGateRef}
                         className="pointer-events-none absolute inset-0 z-[70] flex justify-center"
                     >
-                        <div className="absolute inset-0 z-20 h-screen w-screen bg-[#0A0C0F] opacity-60" />
-                        <div className="absolute top-1/2 z-50 flex -translate-y-1/2 flex-col gap-3">
-                            <p className="relative text-6xl font-bold text-red-400">
-                                PHASE {phaseBanner}
+                        <div className="absolute inset-0 z-20 h-full w-full bg-[#0A0C0F] opacity-80" />
+                        <div className="absolute top-1/2 z-50 flex -translate-y-1/2 flex-col items-center gap-3 px-8 text-center">
+                            <p className="font-noto text-4xl font-bold text-red-400">
+                                {session?.boss_phase === 3
+                                    ? 'FINAL PHASE'
+                                    : `PHASE ${session?.boss_phase ?? 1}`}
                             </p>
-                            <p className="= relative rounded">
-                                Ini masih placeholder, nanti bakal ada animasi
-                                yang berjalan 5 detik ya
+                            <p className="font-arsenal text-xl font-bold text-white">
+                                Wait for your module instruction
                             </p>
                         </div>
                     </div>
                 )}
 
-                {showIntro && !isFinished && (
+                {showIntro && phaseStarted && !isFinished && (
                     // PLACEHOLDER - frontend team to redesign/restyle this.
                     // Tells players what to do before they need to do it
                     // (Shneiderman's "offer informative feedback").

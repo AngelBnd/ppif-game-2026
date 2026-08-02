@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { echo } from '@/echo';
-import type { BossTapResult, SessionInfo } from '@/types/gameSession';
+import type {
+    BossPhaseStartedPayload,
+    BossTapResult,
+    SessionInfo,
+} from '@/types/gameSession';
 
 const CODE_KEY = 'ppif_player_session_code';
 const TOKEN_KEY = 'ppif_player_device_token';
@@ -65,6 +69,10 @@ export function usePlayerSession() {
                 boss_phase: payload.boss_phase,
                 boss_hp: payload.boss_hp,
                 boss_hp_max: payload.boss_hp_max,
+                // Goes null the moment a phase is cleared, which is what
+                // drops every player back to "wait for your module
+                // instruction" until the PIC presses START again.
+                boss_phase_started_at: payload.boss_phase_started_at,
                 // Only the device whose own tap crossed the cutscene
                 // threshold learns via its submitBossTap() response - every
                 // other player only ever hears about it through this
@@ -139,6 +147,16 @@ export function usePlayerSession() {
         // Boss fight: HP/phase from any player's taps (either team), plus
         // whichever team's contribution meter just moved.
         channel.listen('.boss.damaged', applyBossTapResult);
+
+        // The PIC pressed START - the only thing that un-pauses a phase.
+        channel.listen(
+            '.boss.phase-started',
+            (payload: BossPhaseStartedPayload) => {
+                setSession((current) =>
+                    current ? { ...current, ...payload } : current,
+                );
+            },
+        );
 
         return () => {
             echo.leaveChannel(`game-session.${session.code}`);
