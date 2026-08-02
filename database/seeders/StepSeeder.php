@@ -66,6 +66,7 @@ class StepSeeder extends Seeder
                     'opts' => $this->randomizedOpts('Arsip kuno Light Universe', 0),
                 ],
                 'correct_answer' => 'Arsip kuno Light Universe',
+                'time_limit_seconds' => Step::DEFAULT_TIME_LIMIT_SECONDS,
             ],
             [
                 'order' => 4,
@@ -89,6 +90,7 @@ class StepSeeder extends Seeder
                     'opts' => $this->randomizedOpts('Titik-titik cahaya kecil', 1),
                 ],
                 'correct_answer' => 'Titik-titik cahaya kecil',
+                'time_limit_seconds' => Step::DEFAULT_TIME_LIMIT_SECONDS,
             ],
             [
                 'order' => 7,
@@ -112,6 +114,7 @@ class StepSeeder extends Seeder
                     'opts' => $this->randomizedOpts('Terang dan damai', 2),
                 ],
                 'correct_answer' => 'Terang dan damai',
+                'time_limit_seconds' => Step::DEFAULT_TIME_LIMIT_SECONDS,
             ],
             [
                 'order' => 10,
@@ -135,6 +138,7 @@ class StepSeeder extends Seeder
                     'opts' => $this->randomizedOpts('Berbicara', 3),
                 ],
                 'correct_answer' => 'Berbicara',
+                'time_limit_seconds' => Step::DEFAULT_TIME_LIMIT_SECONDS,
             ],
             [
                 'order' => 13,

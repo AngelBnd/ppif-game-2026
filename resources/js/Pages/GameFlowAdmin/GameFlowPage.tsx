@@ -1,5 +1,6 @@
 import Button from '@/Components/global/Button';
 import ConfirmPopup from '@/Components/global/ConfirmPopup';
+import PlayerManagerPanel from '@/Components/global/PlayerManagerPanel';
 import NextButton from '@/assets/icons/NextButtonSVG.svg?react';
 import { useAdminAuth, type AdminUser } from '@/hooks/useAdminAuth';
 import { useAdminSession } from '@/hooks/useAdminSession';
@@ -38,6 +39,8 @@ export default function AdminFlowPage() {
         isLoading: isSessionLoading,
         createSession,
         advanceSession,
+        startBossPhase,
+        removePlayer,
         clearSession,
     } = useAdminSession(!!user && !user.is_admin);
 
@@ -51,7 +54,15 @@ export default function AdminFlowPage() {
         if (user?.is_admin) navigate('/monitor', { replace: true });
     }, [user?.is_admin, navigate]);
 
-    const step = steps.find((item) => item.slug === stepId);
+    const listedStep = steps.find((item) => item.slug === stepId);
+
+    // /api/steps ships the flow without question content so it can't be read
+    // ahead of time; the live question arrives with the session, for whatever
+    // step the room is actually on. Prefer that copy when the two agree.
+    const step =
+        listedStep && session?.current_step?.slug === listedStep.slug
+            ? session.current_step
+            : listedStep;
 
     if (isLoading || isAuthLoading) {
         return (
@@ -208,6 +219,8 @@ export default function AdminFlowPage() {
                 />
             )}
 
+            <PlayerManagerPanel session={session} onRemove={removePlayer} />
+
             <button
                 type="button"
                 onClick={() => setShowClearConfirm(true)}
@@ -250,7 +263,11 @@ export default function AdminFlowPage() {
             {step.type === 'activity' && <ActivityPage step={step} />}
 
             {step.type === 'boss' && (
-                <BossFightPage step={step} session={session} />
+                <BossFightPage
+                    step={step}
+                    session={session}
+                    onStartPhase={startBossPhase}
+                />
             )}
         </div>
     );
