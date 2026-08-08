@@ -12,7 +12,7 @@ import AdminLoginPage from './AdminLoginPage';
 import AnswerTheQuestionPage from './AnswerTheQuestionPage';
 import BossFightPage from './BossFightPage';
 import StorylinePage from './StorylinePage';
-import WaitingRoompage from './WaitingRoomPage';
+import WaitingRoompage from './WaitingRoompage';
 
 // PIC accounts are seeded with both their name ("PIC Kelompok 9/10") and
 // email (iniAkunBuatKel9.10@gmail.com) encoding which two groups they run -

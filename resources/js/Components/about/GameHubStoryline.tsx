@@ -1,5 +1,8 @@
 import { CAMERA_PATHS } from '@/Components/about/cameraPath';
-import { DEFAULT_STORYLINE_TRIGGERS, type StorylinePanel } from '@/Components/about/storylineConfig';
+import {
+    DEFAULT_STORYLINE_TRIGGERS,
+    type StorylinePanel,
+} from '@/Components/about/storylineConfig';
 import {
     CameraConfig,
     useDivisionCamera,
@@ -96,7 +99,7 @@ export default function GameHubStoryline({
 
                     <div
                         ref={cameraRef}
-                        className="relative h-[690px] w-[4000px]"
+                        className="relative h-[690px] w-[4400px]"
                         style={{ perspective: '900px' }}
                     >
                         <div
@@ -131,7 +134,7 @@ export default function GameHubStoryline({
                                 />
                             ))}
                         </div>
-
+                        {/* 
                         {onReady && (
                             <button
                                 onClick={onReady}
@@ -139,7 +142,7 @@ export default function GameHubStoryline({
                             >
                                 I'm Ready
                             </button>
-                        )}
+                        )} */}
                     </div>
                 </div>
             </div>

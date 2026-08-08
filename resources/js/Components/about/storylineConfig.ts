@@ -22,6 +22,13 @@ export type StorylineConfig = {
 // real per-slug panels (and the SLBox line-boxes) once that art exists.
 const Panel1 = '/storyline/1/Panel1.webp';
 
+import Panel1hope from '@/assets/storyline/hope/Panel1.webp';
+import Panel2hope from '@/assets/storyline/hope/Panel2.webp';
+import Panel3hope from '@/assets/storyline/hope/Panel3.webp';
+import Panel4hope from '@/assets/storyline/hope/Panel4.webp';
+import Panel5hope from '@/assets/storyline/hope/Panel5.webp';
+import Panel6hope from '@/assets/storyline/hope/Panel6.webp';
+
 export const DEFAULT_STORYLINE_TRIGGERS: DivisionTrigger[] = [
     { left: 29, top: 20, inset: 64 },
     { left: 45, top: 20, inset: 43 },
@@ -39,9 +46,48 @@ export const STORYLINE_CONFIGS: Record<string, StorylineConfig> = {
     },
     'chapter-1': {
         panels: [
-            { src: Panel1, left: '150px', top: '15%', width: '460px', beat: 0 },
-            { src: Panel1, left: '700px', top: '30%', width: '540px', beat: 1 },
-            { src: Panel1, left: '1400px', top: '12%', width: '500px', beat: 2 },
+            {
+                src: Panel1hope,
+                left: '150px',
+                top: '15%',
+                width: '900px',
+                beat: 0,
+            },
+            {
+                src: Panel2hope,
+                left: '1300px',
+                top: '10%',
+                width: '700px',
+                beat: 1,
+            },
+            {
+                src: Panel3hope,
+                left: '1900px',
+                top: '38%',
+                width: '700px',
+                beat: 2,
+            },
+            {
+                src: Panel4hope,
+                left: '2800px',
+                top: '12%',
+                width: '900px',
+                beat: 2,
+            },
+            {
+                src: Panel5hope,
+                left: '3600px',
+                top: '23%',
+                width: '700px',
+                beat: 2,
+            },
+            {
+                src: Panel6hope,
+                left: '4500px',
+                top: '12%',
+                width: '800px',
+                beat: 2,
+            },
         ],
     },
     'chapter-2': {
@@ -54,20 +100,38 @@ export const STORYLINE_CONFIGS: Record<string, StorylineConfig> = {
         panels: [
             { src: Panel1, left: '250px', top: '18%', width: '480px', beat: 0 },
             { src: Panel1, left: '850px', top: '28%', width: '500px', beat: 1 },
-            { src: Panel1, left: '1600px', top: '14%', width: '520px', beat: 2 },
+            {
+                src: Panel1,
+                left: '1600px',
+                top: '14%',
+                width: '520px',
+                beat: 2,
+            },
         ],
     },
     'epilogue-1': {
         panels: [
             { src: Panel1, left: '300px', top: '20%', width: '540px', beat: 0 },
-            { src: Panel1, left: '1000px', top: '15%', width: '480px', beat: 1 },
+            {
+                src: Panel1,
+                left: '1000px',
+                top: '15%',
+                width: '480px',
+                beat: 1,
+            },
         ],
     },
     'epilogue-2': {
         panels: [
             { src: Panel1, left: '180px', top: '22%', width: '500px', beat: 0 },
             { src: Panel1, left: '820px', top: '18%', width: '520px', beat: 1 },
-            { src: Panel1, left: '1500px', top: '25%', width: '480px', beat: 2 },
+            {
+                src: Panel1,
+                left: '1500px',
+                top: '25%',
+                width: '480px',
+                beat: 2,
+            },
         ],
     },
 };
