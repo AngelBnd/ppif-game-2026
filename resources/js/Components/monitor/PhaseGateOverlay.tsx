@@ -2,7 +2,6 @@ import type { SessionInfo } from '@/types/gameSession';
 import gsap from 'gsap';
 import { useEffect, useRef, useState } from 'react';
 
-import EyeShotStatic from '@/assets/monitor/eye_shot.png';
 import LetsFightBtn from '@/assets/monitor/Lets_fight_Button.svg';
 import NumberOne from '@/assets/monitor/ONE.png';
 import PhaseText from '@/assets/monitor/PHASE.svg';
@@ -209,7 +208,7 @@ export default function PhaseGateOverlay({
                     <>
                         <video
                             ref={introVideoRef}
-                            src="/videos/INTRO_1.webm"
+                            src="/activity/video/phases/Phase1Intro.webm"
                             autoPlay={false}
                             muted
                             playsInline
@@ -221,7 +220,7 @@ export default function PhaseGateOverlay({
                             }`}
                         />
                         <img
-                            src={EyeShotStatic}
+                            src="/activity/video/phases/Phase1Static.webp"
                             alt="Eyeshot Phase 1"
                             className={`absolute h-auto w-screen scale-100 object-contain drop-shadow-2xl transition-opacity duration-300 ${
                                 animationState === 'static'
@@ -231,7 +230,7 @@ export default function PhaseGateOverlay({
                         />
                         <video
                             ref={outroVideoRef}
-                            src="/videos/OUTRO_1.webm"
+                            src="/activity/video/phases/Phase1Outro.webm"
                             muted
                             playsInline
                             onEnded={handleVideoEnd}
@@ -249,7 +248,7 @@ export default function PhaseGateOverlay({
                     <>
                         <video
                             ref={introVideoRef}
-                            src="/videos/INTRO_2.webm"
+                            src="/activity/video/phases/Phase2Intro.webm"
                             autoPlay={false}
                             muted
                             playsInline
@@ -260,9 +259,8 @@ export default function PhaseGateOverlay({
                                     : 'pointer-events-none z-0 opacity-0'
                             }`}
                         />
-                        {/* Ganti src ini nanti dengan EyeShotStatic2 jika file sudah ada */}
                         <img
-                            src={EyeShotStatic}
+                            src="/activity/video/phases/Phase2Static.webp"
                             alt="Eyeshot Phase 2"
                             className={`absolute h-auto w-screen scale-100 object-contain drop-shadow-2xl transition-opacity duration-300 ${
                                 animationState === 'static'
@@ -272,7 +270,7 @@ export default function PhaseGateOverlay({
                         />
                         <video
                             ref={outroVideoRef}
-                            src="/videos/OUTRO_2.webm"
+                            src="/activity/video/phases/Phase2Outro.webm"
                             muted
                             playsInline
                             onEnded={handleVideoEnd}
@@ -290,7 +288,7 @@ export default function PhaseGateOverlay({
                     <>
                         <video
                             ref={introVideoRef}
-                            src="/videos/INTRO_3.webm"
+                            src="/activity/video/phases/Phase3Intro.webm"
                             autoPlay={false}
                             muted
                             playsInline
@@ -301,9 +299,8 @@ export default function PhaseGateOverlay({
                                     : 'pointer-events-none z-0 opacity-0'
                             }`}
                         />
-                        {/* Ganti src ini nanti dengan EyeShotStatic3 jika file sudah ada */}
                         <img
-                            src={EyeShotStatic}
+                            src="/activity/video/phases/Phase3Static.webp"
                             alt="Eyeshot Phase 3"
                             className={`absolute h-auto w-screen scale-100 object-contain drop-shadow-2xl transition-opacity duration-300 ${
                                 animationState === 'static'
@@ -313,7 +310,7 @@ export default function PhaseGateOverlay({
                         />
                         <video
                             ref={outroVideoRef}
-                            src="/videos/OUTRO_3.webm"
+                            src="/activity/video/phases/Phase3Outro.webm"
                             muted
                             playsInline
                             onEnded={handleVideoEnd}
@@ -350,7 +347,7 @@ export default function PhaseGateOverlay({
                         ref={phaseNumRef}
                         src={phaseNumberImg}
                         alt={`Phase ${phaseNum}`}
-                        className="absolute -bottom-10 -right-[15%] z-10 h-auto w-[340px] object-contain opacity-0 drop-shadow-lg md:w-[380px]"
+                        className="absolute -bottom-16 -right-[30%] z-10 h-auto w-[270px] object-contain opacity-0 drop-shadow-lg md:w-[380px]"
                     />
                 </div>
 

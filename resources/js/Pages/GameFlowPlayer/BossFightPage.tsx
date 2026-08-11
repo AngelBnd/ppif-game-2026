@@ -332,7 +332,6 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
     }, [phaseStarted]);
 
     const handleFireTap = (event: MouseEvent<HTMLDivElement>) => {
-
         if (isFinished || !phaseStarted) return;
 
         const bounds = event.currentTarget.getBoundingClientRect();
@@ -515,9 +514,11 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
                         key={bossVideoSrc}
                         autoPlay
                         loop
+                        draggable={false}
                         muted
                         playsInline
-                        className="block h-auto w-full"
+                        tabIndex={-1}
+                        className="block h-auto w-full outline-none [-webkit-tap-highlight-color:transparent]"
                     >
                         <source src={bossVideoSrc} type="video/webm" />
                     </video>

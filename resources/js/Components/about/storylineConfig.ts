@@ -30,6 +30,20 @@ import Panel5hope from '@/assets/storyline/hope/Panel5.webp';
 import Panel6hope from '@/assets/storyline/hope/Panel6.webp';
 import Panel7hope from '@/assets/storyline/hope/Panel7.webp';
 
+import Panel1change from '@/assets/storyline/change/c1.webp';
+import Panel2change from '@/assets/storyline/change/c2.webp';
+import Panel3change from '@/assets/storyline/change/c3.webp';
+import Panel4change from '@/assets/storyline/change/c4.webp';
+import Panel5change from '@/assets/storyline/change/c5.webp';
+import Panel6change from '@/assets/storyline/change/c6.webp';
+
+import Panel1commit from '@/assets/storyline/commit/f1.webp';
+import Panel2commit from '@/assets/storyline/commit/f2.webp';
+import Panel3commit from '@/assets/storyline/commit/f3.webp';
+import Panel4commit from '@/assets/storyline/commit/f4.webp';
+import Panel5commit from '@/assets/storyline/commit/f5.webp';
+import Panel6commit from '@/assets/storyline/commit/f6.webp';
+
 import Prologue1 from '@/assets/storyline/prolog/e1.webp';
 import Prologue2 from '@/assets/storyline/prolog/e2.webp';
 import Prologue3 from '@/assets/storyline/prolog/e3.webp';
@@ -83,23 +97,23 @@ export const STORYLINE_CONFIGS: Record<string, StorylineConfig> = {
             },
             {
                 src: Prologue4,
-                left: '3200px',
-                top: '20%',
-                width: '250px',
+                left: '3000px',
+                top: '3%',
+                width: '350px',
                 beat: 2,
             },
             {
                 src: Prologue5,
-                left: '3500px',
-                top: '20%',
-                width: '250px',
+                left: '3400px',
+                top: '3%',
+                width: '350px',
                 beat: 2,
             },
             {
                 src: Prologue6,
                 left: '3800px',
-                top: '20%',
-                width: '250px',
+                top: '3%',
+                width: '350px',
                 beat: 2,
             },
         ],
@@ -110,7 +124,7 @@ export const STORYLINE_CONFIGS: Record<string, StorylineConfig> = {
                 src: Panel1hope,
                 left: '150px',
                 top: '15%',
-                width: '900px',
+                width: '1000px',
                 beat: 0,
             },
             {
@@ -159,19 +173,92 @@ export const STORYLINE_CONFIGS: Record<string, StorylineConfig> = {
     },
     'chapter-2': {
         panels: [
-            { src: Panel1, left: '100px', top: '25%', width: '500px', beat: 0 },
-            { src: Panel1, left: '900px', top: '10%', width: '520px', beat: 1 },
+            {
+                src: Panel1change,
+                left: '150px',
+                top: '14%',
+                width: '1000px',
+                beat: 0,
+            },
+            {
+                src: Panel2change,
+                left: '1250px',
+                top: '20%',
+                width: '900px',
+                beat: 1,
+            },
+            {
+                src: Panel3change,
+                left: '2000px',
+                top: '10%',
+                width: '900px',
+                beat: 2,
+            },
+            {
+                src: Panel4change,
+                left: '3000px',
+                top: '20%',
+                width: '800px',
+                beat: 2,
+            },
+            {
+                src: Panel5change,
+                left: '3950px',
+                top: '12%',
+                width: '850px',
+                beat: 2,
+            },
+            {
+                src: Panel6change,
+                left: '4900px',
+                top: '22%',
+                width: '800px',
+                beat: 2,
+            },
         ],
     },
     'chapter-3': {
         panels: [
-            { src: Panel1, left: '250px', top: '18%', width: '480px', beat: 0 },
-            { src: Panel1, left: '850px', top: '28%', width: '500px', beat: 1 },
             {
-                src: Panel1,
-                left: '1600px',
+                src: Panel1commit,
+                left: '150px',
                 top: '14%',
-                width: '520px',
+                width: '1000px',
+                beat: 0,
+            },
+            {
+                src: Panel2commit,
+                left: '1200px',
+                top: '34%',
+                width: '800px',
+                beat: 1,
+            },
+            {
+                src: Panel3commit,
+                left: '1950px',
+                top: '10%',
+                width: '900px',
+                beat: 2,
+            },
+            {
+                src: Panel4commit,
+                left: '2950px',
+                top: '19%',
+                width: '850px',
+                beat: 2,
+            },
+            {
+                src: Panel5commit,
+                left: '4150px',
+                top: '15%',
+                width: '850px',
+                beat: 2,
+            },
+            {
+                src: Panel6commit,
+                left: '5000px',
+                top: '22%',
+                width: '800px',
                 beat: 2,
             },
         ],

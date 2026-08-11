@@ -10,9 +10,27 @@ import {
 } from '@/Components/about/useDivisionCamera';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 gsap.registerPlugin(ScrollTrigger);
+
+// Padding past the rightmost panel so the last image isn't flush against
+// the end of the scroll track.
+const TRACK_END_PADDING_PX = 100;
+
+// Trigger `left`/`top` percentages (see storylineConfig) are computed
+// against this track width, so it has to match the actual panel content -
+// a fixed width either clips later panels short or leaves the camera
+// scrolling past empty space once they don't line up with panel count.
+function trackWidthFor(panels: StorylinePanel[]): number {
+    if (panels.length === 0) return TRACK_END_PADDING_PX;
+
+    const rightEdge = Math.max(
+        ...panels.map((p) => parseFloat(p.left) + parseFloat(p.width)),
+    );
+
+    return rightEdge + TRACK_END_PADDING_PX;
+}
 
 type Props = {
     panels: StorylinePanel[];
@@ -32,6 +50,8 @@ export default function GameHubStoryline({
     const cameraRef = useRef<HTMLDivElement>(null);
     const clipRef = useRef<HTMLDivElement>(null);
     const markRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const panelImgRefs = useRef<(HTMLImageElement | null)[]>([]);
+    panelImgRefs.current = panelImgRefs.current.slice(0, panels.length);
 
     const refs = useRef({
         scroller: scrollRef,
@@ -41,6 +61,8 @@ export default function GameHubStoryline({
         clip: clipRef,
         marks: markRefs,
     }).current;
+
+    const trackWidth = useMemo(() => trackWidthFor(panels), [panels]);
 
     const CAMERA_CONFIG: Partial<CameraConfig> = {
         perspective: 900,
@@ -67,6 +89,87 @@ export default function GameHubStoryline({
         config: CAMERA_CONFIG,
     });
 
+    useEffect(() => {
+        const scroller = scrollRef.current;
+        const elements = panelImgRefs.current.filter(
+            (el): el is HTMLImageElement => el !== null,
+        );
+        if (!scroller || elements.length !== panels.length) return;
+
+        const reduce = window.matchMedia(
+            '(prefers-reduced-motion: reduce)',
+        ).matches;
+
+        if (reduce) {
+            gsap.set(elements, { opacity: 1, scale: 1, y: 0 });
+            return;
+        }
+
+        gsap.set(elements, { scale: 0.55, y: 30, transformOrigin: '50% 50%' });
+
+        const popIn = (el: HTMLImageElement) =>
+            gsap.to(el, {
+                opacity: 1,
+                scale: 1,
+                y: 0,
+                duration: 0.5,
+                ease: 'back.out(1.3)',
+            });
+
+        // Driven directly off scrollLeft instead of ScrollTrigger - simpler
+        // to reason about here, and sidesteps ScrollTrigger's own
+        // trigger/end defaulting when created without a `trigger` element.
+        // Thresholds come from the panel config (left/width), not
+        // getBoundingClientRect - the camera hook rewrites this element's
+        // ancestor transform every frame, so a measured rect wouldn't
+        // reflect where the panel actually sits once the user scrolls.
+        const revealed = elements.map(() => false);
+
+        const computeStarts = () => {
+            const viewW = scroller.clientWidth;
+            const maxScroll = Math.max(0, scroller.scrollWidth - viewW);
+
+            return panels.map((p) => {
+                const center = parseFloat(p.left) + parseFloat(p.width) / 2;
+
+                // A panel near the end of the track can sit close enough to
+                // the right edge that centering it would need more scroll
+                // than the track actually has - clamp to the furthest the
+                // user can actually reach, so it still pops in (right when
+                // the user hits the end of the scroll) instead of never
+                // crossing its threshold.
+                return Math.min(center - viewW / 2, maxScroll);
+            });
+        };
+
+        let starts = computeStarts();
+
+        const checkReveal = () => {
+            const pos = scroller.scrollLeft;
+            starts.forEach((start, i) => {
+                if (!revealed[i] && pos >= start) {
+                    revealed[i] = true;
+                    popIn(elements[i]);
+                }
+            });
+        };
+
+        checkReveal();
+        scroller.addEventListener('scroll', checkReveal, { passive: true });
+
+        const onResize = () => {
+            starts = computeStarts();
+            checkReveal();
+        };
+        window.addEventListener('resize', onResize);
+
+        return () => {
+            scroller.removeEventListener('scroll', checkReveal);
+            window.removeEventListener('resize', onResize);
+            gsap.killTweensOf(elements);
+        };
+    }, [panels]);
+
     return (
         <div className="absolute inset-0 overflow-hidden text-white">
             <div
@@ -77,9 +180,9 @@ export default function GameHubStoryline({
                     ref={panelRef}
                     className="relative"
                     style={{
-                        width: '3400px',
+                        width: `${trackWidth}px`,
                         height: '856px',
-                        minWidth: '3400px',
+                        minWidth: `${trackWidth}px`,
                         minHeight: '856px',
                     }}
                 >
@@ -93,7 +196,7 @@ export default function GameHubStoryline({
                                 left: `${trg.left}%`,
                                 top: `${trg.top}%`,
                             }}
-                            className="absolute z-50 h-5 w-5 bg-green-500"
+                            className="absolute z-50 h-5 w-5"
                         />
                     ))}
 
@@ -121,6 +224,9 @@ export default function GameHubStoryline({
                             {panels.map((p, i) => (
                                 <img
                                     key={`panel-${i}`}
+                                    ref={(el) => {
+                                        panelImgRefs.current[i] = el;
+                                    }}
                                     src={p.src}
                                     alt=""
                                     draggable={false}
@@ -129,6 +235,7 @@ export default function GameHubStoryline({
                                         left: p.left,
                                         top: p.top,
                                         width: p.width,
+                                        opacity: 0,
                                     }}
                                     className="pointer-events-none absolute z-30 h-auto select-none"
                                 />
