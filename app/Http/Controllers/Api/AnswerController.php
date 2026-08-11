@@ -13,6 +13,15 @@ use Illuminate\Http\Request;
 
 class AnswerController extends Controller
 {
+    /**
+     * Slack added to a step's time_limit_seconds before the server refuses a
+     * submission. The countdown every phone renders is computed from the same
+     * activated_at this checks against, but the tap still has to travel over
+     * the venue WiFi - without a little headroom a player who answered on the
+     * last visible second would be told they were too late.
+     */
+    private const TIME_LIMIT_GRACE_SECONDS = 3;
+
     public function store(Request $request, string $code)
     {
         $validated = $request->validate([
@@ -20,7 +29,7 @@ class AnswerController extends Controller
             'answer_text' => ['required', 'string', 'max:255'],
         ]);
 
-        $session = GameSession::where('code', $code)->with('currentStep')->firstOrFail();
+        $session = GameSession::whereCode($code)->with('currentStep')->firstOrFail();
 
         abort_if(
             $session->currentStep?->type !== 'answer',
@@ -40,6 +49,17 @@ class AnswerController extends Controller
             ->where('step_id', $session->current_step_id)
             ->whereNull('deactivated_at')
             ->firstOrFail();
+
+        // The countdown was previously enforced by the client alone: the only
+        // real deadline was the PIC eventually pressing Next, so a team that
+        // let the visible timer run out could still submit and still score.
+        $deadline = $session->currentStep->effectiveTimeLimitSeconds() + self::TIME_LIMIT_GRACE_SECONDS;
+
+        abort_if(
+            $progress->activated_at->diffInSeconds(now(), absolute: true) > $deadline,
+            422,
+            'Waktu untuk soal ini sudah habis.',
+        );
 
         $alreadyAnswered = Answer::where('team_id', $player->team_id)
             ->where('step_id', $session->current_step_id)

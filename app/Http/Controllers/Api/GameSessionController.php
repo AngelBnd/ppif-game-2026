@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Events\PlayerJoined;
 use App\Events\PlayerLeft;
+use App\Http\Controllers\Controller;
 use App\Http\Resources\GameSessionResource;
 use App\Models\GameSession;
 use App\Models\Player;
@@ -12,15 +12,44 @@ use App\Models\Team;
 use App\Rules\CleanNickname;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
 class GameSessionController extends Controller
 {
-    public function show(string $code)
+    /**
+     * Failed code lookups allowed per IP per minute.
+     *
+     * This endpoint is unauthenticated and hands back a room's full state, so
+     * it is the obvious place to go looking for a live session. The real
+     * defence against that is the size of the code space (see
+     * GameSession::CODE_ALPHABET); this is a speed bump on top, and it is
+     * charged only against lookups that miss. Gating successful ones too
+     * would be worse than the problem: the whole room is behind the venue's
+     * public IP, so one person probing - or just fat-fingering their code -
+     * would lock every other player out of joining.
+     */
+    private const MAX_FAILED_LOOKUPS_PER_MINUTE = 20;
+
+    public function show(Request $request, string $code)
     {
-        $session = GameSession::where('code', $code)
+        $session = GameSession::whereCode($code)
             ->with(['teams.players', 'currentStep'])
-            ->firstOrFail();
+            ->first();
+
+        if (! $session) {
+            $probeKey = 'session-probe:'.$request->ip();
+
+            abort_if(
+                RateLimiter::tooManyAttempts($probeKey, self::MAX_FAILED_LOOKUPS_PER_MINUTE),
+                429,
+                'Terlalu banyak kode yang salah. Tunggu sebentar lalu coba lagi.',
+            );
+
+            RateLimiter::hit($probeKey, 60);
+
+            abort(404, 'Not found.');
+        }
 
         return new GameSessionResource($session);
     }
@@ -38,7 +67,7 @@ class GameSessionController extends Controller
             ],
         ]);
 
-        $session = GameSession::where('code', $code)->firstOrFail();
+        $session = GameSession::whereCode($code)->firstOrFail();
 
         [$player, $team] = DB::transaction(function () use ($session, $validated) {
             // Lock the team row so two devices tapping the same team at the
@@ -86,7 +115,7 @@ class GameSessionController extends Controller
             'device_token' => ['required', 'string'],
         ]);
 
-        $session = GameSession::where('code', $code)->firstOrFail();
+        $session = GameSession::whereCode($code)->firstOrFail();
 
         $player = Player::where('device_token', $validated['device_token'])->firstOrFail();
 

@@ -10,6 +10,15 @@ class Step extends Model
 {
     use HasFactory;
 
+    /**
+     * Countdown used when a step doesn't set its own time_limit_seconds.
+     * Must stay in step with the `?? 60` fallback in both AnswerTheQuestion
+     * pages, since that is what players actually see ticking down - the
+     * server rejecting an answer the phone still showed as in-time would
+     * read as the game eating a submission.
+     */
+    public const DEFAULT_TIME_LIMIT_SECONDS = 60;
+
     protected $fillable = [
         'order',
         'slug',
@@ -29,6 +38,15 @@ class Step extends Model
         return [
             'content' => 'array',
         ];
+    }
+
+    /**
+     * The countdown this step is actually played with - its own limit, or the
+     * shared default when it hasn't set one.
+     */
+    public function effectiveTimeLimitSeconds(): int
+    {
+        return $this->time_limit_seconds ?? self::DEFAULT_TIME_LIMIT_SECONDS;
     }
 
     public function answers(): HasMany

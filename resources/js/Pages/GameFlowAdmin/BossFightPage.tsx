@@ -1,3 +1,4 @@
+import PhaseGateOverlay from '@/Components/monitor/PhaseGateOverlay';
 import BossHealthBar from '@/Components/monitor/BossHealth';
 import { TeamHP } from '@/Components/monitor/TeamHP';
 import BOSS from '@/assets/monitor/BOSS.svg?react';
@@ -23,71 +24,82 @@ const TEAM_CONTRIBUTION_MAX = 900;
 type Props = {
     step: Step;
     session: SessionInfo | null;
+    onStartPhase: () => Promise<SessionInfo>;
 };
 
-export default function BossFightPage({ step, session }: Props) {
+export default function BossFightPage({ step, session, onStartPhase }: Props) {
     const containerRef = useRef<HTMLElement>(null);
     const isFinished = session?.boss_finished_at != null;
 
-    // The HP bar shown on screen lags behind the live session state on a
-    // phase change - held at the old phase's numbers for 5s (with the
-    // "PHASE N" banner up) before snapping to the new phase, instead of the
-    // bar instantly jumping the moment the triggering tap lands server-side.
-    // Regular in-phase HP ticks still update immediately, no delay.
+    // Every phase sits paused until the PIC presses START below - both on
+    // arrival at the boss step (phase 1) and after each cleared phase.
+    const phaseStarted = session?.boss_phase_started_at != null;
+    const [isStarting, setIsStarting] = useState(false);
+    const [startError, setStartError] = useState(false);
+    const [pressState, setPressState] = useState<'idle' | 'press'>('idle');
+
+    // State untuk menandai animasi teks bos selesai
+    const [isBossIntroDone, setIsBossIntroDone] = useState(false);
+
+    // The HP bar shown on screen lags behind the live session state across a
+    // phase change - held at the old phase's numbers for as long as the
+    // fight is paused, so it doesn't jump to the next phase's full bar the
+    // instant the clearing tap lands server-side. It snaps to the new phase
+    // when the PIC starts it. Regular in-phase HP ticks update immediately.
     const [displayedHp, setDisplayedHp] = useState(session?.boss_hp ?? 0);
     const [displayedHpMax, setDisplayedHpMax] = useState(
         session?.boss_hp_max ?? 1,
     );
 
-    const [phaseBanner, setPhaseBanner] = useState<number | null>(null);
-    const prevPhaseRef = useRef<number | undefined>(undefined);
-    const phaseBannerRef = useRef<HTMLDivElement>(null);
+    const phaseGateRef = useRef<HTMLDivElement>(null);
 
-    // Banner timer keyed ONLY on phase - it used to also depend on
-    // boss_hp/boss_hp_max, so every in-phase tap (every ~300ms while
-    // anyone's tapping) cancelled the pending clear via the effect
-    // cleanup and never rescheduled it, leaving the banner stuck on
-    // screen for the rest of the fight.
-    useEffect(() => {
-        const phase = session?.boss_phase;
-        if (phase === undefined) return;
+    // Phase 2/3 swap in their own puppet cutscene clip; anything else
+    // (including no session yet) falls back to the phase 1 clip.
+    const bossVideoSrc =
+        session?.boss_phase === 3
+            ? '/videos/puppetcodie3.webm'
+            : session?.boss_phase === 2
+              ? '/videos/puppetcodie2.webm'
+              : '/videos/puppetcodie.webm';
 
-        if (prevPhaseRef.current === undefined) {
-            prevPhaseRef.current = phase;
-            return;
-        }
-
-        if (phase === prevPhaseRef.current) return;
-
-        prevPhaseRef.current = phase;
-        setPhaseBanner(phase);
-
-        const timeout = setTimeout(() => setPhaseBanner(null), 5000);
-        return () => clearTimeout(timeout);
-    }, [session?.boss_phase]);
-
-    // Live HP display - held at its last value while the banner is up
-    // (phaseBanner !== null), then snaps to whatever's current the moment
-    // the banner clears above.
     useEffect(() => {
         const hp = session?.boss_hp;
         const hpMax = session?.boss_hp_max;
         if (hp === undefined || hpMax === undefined) return;
-        if (phaseBanner !== null) return;
+        if (!phaseStarted) return;
 
         setDisplayedHp(hp);
         setDisplayedHpMax(hpMax);
-    }, [session?.boss_hp, session?.boss_hp_max, phaseBanner]);
+    }, [session?.boss_hp, session?.boss_hp_max, phaseStarted]);
 
     useEffect(() => {
-        if (phaseBanner === null || !phaseBannerRef.current) return;
+        if (phaseStarted || isFinished || !phaseGateRef.current) return;
 
         gsap.fromTo(
-            phaseBannerRef.current,
+            phaseGateRef.current,
             { scale: 0.5, autoAlpha: 0 },
             { scale: 1, autoAlpha: 1, duration: 0.3, ease: 'back.out(2)' },
         );
-    }, [phaseBanner]);
+    }, [phaseStarted, isFinished]);
+
+    const handleStartPhase = () => {
+        if (isStarting) return;
+
+        setIsStarting(true);
+        setStartError(false);
+        setPressState('press');
+        setTimeout(() => setPressState('idle'), 160);
+
+        onStartPhase()
+            .catch(() => setStartError(true))
+            .finally(() => setIsStarting(false));
+
+        // GANTI DENGAN MOCK SUCCESS INI
+        // setTimeout(() => {
+        //     console.log("Berhasil pura-pura memanggil backend!");
+        //     setIsStarting(false);
+        // }, 500);
+    };
 
     const codieRef = useRef<HTMLDivElement>(null);
     const thingRef = useRef<HTMLDivElement>(null);
@@ -235,16 +247,21 @@ export default function BossFightPage({ step, session }: Props) {
         return () => ctx.revert();
     }, []);
 
-    useLayoutEffect(() => {
-        const container = bossIntroContainerRef.current;
-        const overlay = bossOverlayRef.current;
-        const bossGroup = bossGroupRef.current;
-        const fight = fightRef.current;
+        useLayoutEffect(() => {
+            const container = bossIntroContainerRef.current;
+            const overlay = bossOverlayRef.current;
+            const bossGroup = bossGroupRef.current;
+            const fight = fightRef.current;
 
-        if (!container || !overlay || !bossGroup || !fight) return;
+        if (!container || !overlay || !bossGroup || !fight) {
+            setIsBossIntroDone(true); // Fallback aman
+            return;
+        }
 
         const ctx = gsap.context(() => {
-            const timeline = gsap.timeline();
+            const timeline = gsap.timeline({
+                onComplete: () => setIsBossIntroDone(true) 
+            });
 
             timeline
                 // Fade in the black overlay
@@ -412,22 +429,15 @@ export default function BossFightPage({ step, session }: Props) {
                 ))}
             </div>
 
-            {phaseBanner !== null && !isFinished && (
-                <div
-                    ref={phaseBannerRef}
-                    className="pointer-events-none absolute inset-0 z-[70] flex justify-center"
-                >
-                    <div className="absolute inset-0 z-20 h-screen w-screen bg-[#0A0C0F] opacity-60" />
-                    <div className="absolute top-1/2 z-50 flex -translate-y-1/2 flex-col gap-3">
-                        <p className="relative text-6xl font-bold text-red-400">
-                            PHASE {phaseBanner}
-                        </p>
-                        <p className="= relative rounded">
-                            Ini masih placeholder, nanti bakal ada animasi yang
-                            berjalan 5 detik ya
-                        </p>
-                    </div>
-                </div>
+            {/* Phase transition UI: Plays intro -> static wait -> outro on click -> handleStartPhase */}
+            {!phaseStarted && !isFinished && (
+                <PhaseGateOverlay 
+                    session={session}
+                    isStarting={isStarting}
+                    startError={startError}
+                    onStartPhase={handleStartPhase}
+                    isIntroDone={isBossIntroDone}
+                />  
             )}
 
             {isFinished && (
@@ -447,13 +457,14 @@ export default function BossFightPage({ step, session }: Props) {
 
             <div className="absolute left-[47%] top-[10%] z-0">
                 <video
+                    key={bossVideoSrc}
                     autoPlay
                     loop
                     muted
                     playsInline
                     className="block h-auto w-[24rem]"
                 >
-                    <source src="/videos/puppetcodie.webm" type="video/webm" />
+                    <source src={bossVideoSrc} type="video/webm" />
                 </video>
 
                 <div
