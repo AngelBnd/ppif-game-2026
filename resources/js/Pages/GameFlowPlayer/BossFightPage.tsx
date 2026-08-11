@@ -12,7 +12,13 @@ import LightingStrike from '@/assets/svgs/LIGHTINGSTRIKE.svg?react';
 import Tapmanajaa from '@/assets/svgs/tapmanajaa.svg?react';
 import type { BossTapResult, SessionInfo } from '@/types/gameSession';
 import type { Step } from '@/types/step';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+    type MouseEvent,
+    useEffect,
+    useLayoutEffect,
+    useRef,
+    useState,
+} from 'react';
 
 import gsap from 'gsap';
 
@@ -36,7 +42,11 @@ type Props = {
 export default function BossFightPage({ step, session, team, onTap }: Props) {
     const containerRef = useRef<HTMLElement>(null);
     const pendingTapsRef = useRef(0);
+    const fireAttackIdRef = useRef(0);
     const [cutscene, setCutscene] = useState(false);
+    const [fireAttacks, setFireAttacks] = useState<
+        { id: number; x: number; y: number }[]
+    >([]);
     // Placeholder instructional overlay ("offer informative feedback" before
     // asking players to act) - frontend to restyle/animate this later.
     const [showIntro, setShowIntro] = useState(true);
@@ -304,8 +314,23 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
         return () => ctx.revert();
     }, [showIntro, phaseStarted]);
 
-    const handleFireTap = () => {
+    const handleFireTap = (event: MouseEvent<HTMLDivElement>) => {
+
         if (isFinished || !phaseStarted) return;
+
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const fireAttack = {
+            id: fireAttackIdRef.current++,
+            x: event.clientX - bounds.left,
+            y: event.clientY - bounds.top,
+        };
+
+        setFireAttacks((current) => [...current, fireAttack]);
+        setTimeout(() => {
+            setFireAttacks((current) =>
+                current.filter((attack) => attack.id !== fireAttack.id),
+            );
+        }, 450);
 
         // First tap doubles as "dismiss the instructions" - still counts
         // toward the boss's HP, no wasted tap.
@@ -371,6 +396,16 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
                 className="relative h-full w-full max-w-[430px] overflow-hidden"
                 onClick={handleFireTap}
             >
+                {fireAttacks.map((attack) => (
+                    <img
+                        key={attack.id}
+                        src="/activity/fire-attack.png"
+                        alt=""
+                        className="pointer-events-none absolute z-[75] w-24 -translate-x-1/2 -translate-y-1/2 animate-ping"
+                        style={{ left: attack.x, top: attack.y }}
+                    />
+                ))}
+
                 <div className="relative top-4 z-40 flex w-full flex-col">
                     <div className="relative w-full" ref={bossHealthRef}>
                         <Bosshealth className="block h-auto w-full" />
