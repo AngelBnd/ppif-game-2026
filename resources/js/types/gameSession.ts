@@ -12,7 +12,6 @@ export type TeamInfo = {
 };
 
 export type SessionInfo = {
-    id: number;
     code: string;
     class_name: string | null;
     status: 'waiting' | 'active' | 'finished';
@@ -30,6 +29,10 @@ export type SessionInfo = {
     boss_phase: number;
     boss_hp: number;
     boss_hp_max: number;
+    // Null while the current boss phase is paused, waiting for the PIC to
+    // press START. Players can't tap and the monitor holds its HP bar until
+    // this is set - see Admin/Player BossFightPage.
+    boss_phase_started_at: string | null;
     boss_finished_at: string | null;
 };
 
@@ -37,8 +40,16 @@ export type BossTapResult = {
     boss_phase: number;
     boss_hp: number;
     boss_hp_max: number;
+    boss_phase_started_at: string | null;
     phase_changed: boolean;
     cutscene: boolean;
     team_id: number;
     team_hp: number;
+};
+
+export type BossPhaseStartedPayload = {
+    boss_phase: number;
+    boss_hp: number;
+    boss_hp_max: number;
+    boss_phase_started_at: string | null;
 };

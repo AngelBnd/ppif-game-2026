@@ -1,9 +1,11 @@
 import Button from '@/Components/global/Button';
 import ConfirmPopup from '@/Components/global/ConfirmPopup';
+import PlayerManagerPanel from '@/Components/global/PlayerManagerPanel';
 import NextButton from '@/assets/icons/NextButtonSVG.svg?react';
 import { useAdminAuth, type AdminUser } from '@/hooks/useAdminAuth';
 import { useAdminSession } from '@/hooks/useAdminSession';
 import { useSteps } from '@/hooks/useSteps';
+import type { SessionInfo } from '@/types/gameSession';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ActivityPage from './ActivityPage';
@@ -11,7 +13,14 @@ import AdminLoginPage from './AdminLoginPage';
 import AnswerTheQuestionPage from './AnswerTheQuestionPage';
 import BossFightPage from './BossFightPage';
 import StorylinePage from './StorylinePage';
-import WaitingRoompage from './WaitingRoompage';
+import WaitingRoompage from './WaitingRoomPage';
+
+const isDev = import.meta.env.DEV;
+
+// Mirrors GameSession::BOSS_PHASE_MAX_HP on the backend - dev-preview only,
+// so the boss step can be looked at via devNav without a live session that's
+// actually on the boss step (which only the real advance() call sets up).
+const DEV_BOSS_PHASE_MAX_HP: Record<number, number> = { 1: 120, 2: 180, 3: 300 };
 
 // PIC accounts are seeded with both their name ("PIC Kelompok 9/10") and
 // email (iniAkunBuatKel9.10@gmail.com) encoding which two groups they run -
@@ -38,6 +47,8 @@ export default function AdminFlowPage() {
         isLoading: isSessionLoading,
         createSession,
         advanceSession,
+        startBossPhase,
+        removePlayer,
         clearSession,
     } = useAdminSession(!!user && !user.is_admin);
 
@@ -45,13 +56,63 @@ export default function AdminFlowPage() {
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [isClearing, setIsClearing] = useState(false);
 
+    // Local-only "has the dev preview's START been pressed" flag - lets the
+    // boss gate be toggled while previewing without ever calling the real
+    // boss/start endpoint. Reset on every step change so re-entering the
+    // preview always starts gated, like a real session would.
+    const [devBossPhaseStarted, setDevBossPhaseStarted] = useState(false);
+    useEffect(() => setDevBossPhaseStarted(false), [stepId]);
+
     // The monitoring-only admin account doesn't run a room - send it
     // straight to the overview dashboard instead of the group-number form.
     useEffect(() => {
         if (user?.is_admin) navigate('/monitor', { replace: true });
     }, [user?.is_admin, navigate]);
 
-    const step = steps.find((item) => item.slug === stepId);
+    const listedStep = steps.find((item) => item.slug === stepId);
+
+    // /api/steps ships the flow without question content so it can't be read
+    // ahead of time; the live question arrives with the session, for whatever
+    // step the room is actually on. Prefer that copy when the two agree.
+    const step =
+        listedStep && session?.current_step?.slug === listedStep.slug
+            ? session.current_step
+            : listedStep;
+
+    // Pure client-side step browsing for building/testing the flow - never
+    // calls advanceSession, so it can't touch the session row in the DB.
+    const sortedSteps = [...steps].sort((a, b) => a.order - b.order);
+    const currentIndex = sortedSteps.findIndex((item) => item.slug === stepId);
+    const prevStep = currentIndex > 0 ? sortedSteps[currentIndex - 1] : null;
+    const nextStep =
+        currentIndex >= 0 && currentIndex < sortedSteps.length - 1
+            ? sortedSteps[currentIndex + 1]
+            : null;
+
+    const devNav = isDev && (
+        <div className="fixed bottom-12 left-1/2 z-[999] flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/80 px-3 py-2 font-mono text-xs text-white shadow-lg">
+            <button
+                type="button"
+                disabled={!prevStep}
+                onClick={() => prevStep && navigate(`/admin/${prevStep.slug}`)}
+                className="rounded-full bg-white/10 px-3 py-1 disabled:opacity-30"
+            >
+                ← Prev
+            </button>
+
+            <span className="px-2 py-1">{stepId ?? '?'}</span>
+
+            {nextStep && (
+                <button
+                    type="button"
+                    onClick={() => navigate(`/admin/${nextStep.slug}`)}
+                    className="rounded-full bg-white/10 px-3 py-1"
+                >
+                    Next →
+                </button>
+            )}
+        </div>
+    );
 
     if (isLoading || isAuthLoading) {
         return (
@@ -142,6 +203,8 @@ export default function AdminFlowPage() {
                         Back to Start
                     </button>
                 </div>
+
+                {devNav}
             </main>
         );
     }
@@ -165,6 +228,35 @@ export default function AdminFlowPage() {
     const confirmNext = () => {
         setShowNextConfirm(false);
         goNext();
+    };
+
+    // True when devNav has jumped to the boss step ahead of where the real
+    // session actually is - the server only ever sets up boss_phase/boss_hp
+    // inside advance() when a session's current step genuinely becomes the
+    // boss step, so a plain URL jump would otherwise show empty/stale boss
+    // state. Preview that state locally instead, so nothing needs to touch
+    // the session row to look at this screen.
+    const isPreviewingBoss =
+        isDev && step.type === 'boss' && session.current_step?.slug !== step.slug;
+
+    const previewBossSession: SessionInfo = {
+        ...session,
+        current_step: step,
+        boss_phase: 1,
+        boss_hp: DEV_BOSS_PHASE_MAX_HP[1],
+        boss_hp_max: DEV_BOSS_PHASE_MAX_HP[1],
+        boss_phase_started_at: devBossPhaseStarted
+            ? new Date().toISOString()
+            : null,
+        boss_finished_at: null,
+    };
+
+    // Stands in for startBossPhase while previewing - flips the local gate
+    // instead of PATCHing /boss/start, so pressing START to look at the
+    // fight never writes to the DB.
+    const devStartBossPhase = async () => {
+        setDevBossPhaseStarted(true);
+        return { ...previewBossSession, boss_phase_started_at: new Date().toISOString() };
     };
 
     const confirmClearSession = async () => {
@@ -208,6 +300,8 @@ export default function AdminFlowPage() {
                 />
             )}
 
+            <PlayerManagerPanel session={session} onRemove={removePlayer} />
+
             <button
                 type="button"
                 onClick={() => setShowClearConfirm(true)}
@@ -250,8 +344,16 @@ export default function AdminFlowPage() {
             {step.type === 'activity' && <ActivityPage step={step} />}
 
             {step.type === 'boss' && (
-                <BossFightPage step={step} session={session} />
+                <BossFightPage
+                    step={step}
+                    session={isPreviewingBoss ? previewBossSession : session}
+                    onStartPhase={
+                        isPreviewingBoss ? devStartBossPhase : startBossPhase
+                    }
+                />
             )}
+
+            {devNav}
         </div>
     );
 }

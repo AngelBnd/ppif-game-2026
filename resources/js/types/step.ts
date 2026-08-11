@@ -6,6 +6,10 @@ export type Step = {
     slug: string;
     type: StepType;
     title: string;
-    content: { question?: string; opts?: string[] } | null;
+    // Only ever present on session.current_step. /api/steps serves the flow
+    // without it, so the question set isn't readable before the game starts
+    // (see StepResource) - GameFlowPage merges the two into the step it
+    // hands to AnswerTheQuestionPage.
+    content?: { question?: string; opts?: string[] } | null;
     time_limit_seconds: number | null;
 };

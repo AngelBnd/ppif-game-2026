@@ -1,7 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
 import { echo } from '@/echo';
+import type {
+    BossPhaseStartedPayload,
+    BossTapResult,
+    SessionInfo,
+} from '@/types/gameSession';
 import { getXsrfToken } from '@/utils/csrf';
-import type { BossTapResult, SessionInfo } from '@/types/gameSession';
+import { useCallback, useEffect, useState } from 'react';
 
 export function useAdminSession(enabled: boolean) {
     const [session, setSession] = useState<SessionInfo | null>(null);
@@ -30,7 +34,9 @@ export function useAdminSession(enabled: boolean) {
         }
 
         setIsRestoring(true);
-        fetch('/api/admin/my-session', { headers: { Accept: 'application/json' } })
+        fetch('/api/admin/my-session', {
+            headers: { Accept: 'application/json' },
+        })
             .then((res) => res.json())
             .then((body) => {
                 if (body.data) setSession(body.data);
@@ -86,6 +92,17 @@ export function useAdminSession(enabled: boolean) {
                     boss_phase: payload.boss_phase,
                     boss_hp: payload.boss_hp,
                     boss_hp_max: payload.boss_hp_max,
+                    // Goes null when a phase is cleared - that's what brings
+                    // the START button back up on the monitor.
+                    boss_phase_started_at: payload.boss_phase_started_at,
+                    // The admin never taps, so this broadcast is the only
+                    // way it can learn the fight is over - without this,
+                    // boss_finished_at stayed null forever and the "boss
+                    // defeated" screen never showed, even though the fight
+                    // had actually ended server-side.
+                    boss_finished_at: payload.cutscene
+                        ? new Date().toISOString()
+                        : current.boss_finished_at,
                     teams: current.teams.map((t) =>
                         t.id === payload.team_id
                             ? { ...t, hp: payload.team_hp }
@@ -94,6 +111,17 @@ export function useAdminSession(enabled: boolean) {
                 };
             });
         });
+
+        // Mirrors this PIC's own START press back onto any other monitor
+        // watching the same room (and keeps a reloaded tab in sync).
+        channel.listen(
+            '.boss.phase-started',
+            (payload: BossPhaseStartedPayload) => {
+                setSession((current) =>
+                    current ? { ...current, ...payload } : current,
+                );
+            },
+        );
 
         return () => {
             echo.leaveChannel(`game-session.${session.code}`);
@@ -131,10 +159,13 @@ export function useAdminSession(enabled: boolean) {
     const advanceSession = useCallback(async () => {
         if (!session) throw new Error('No active session');
 
-        const res = await fetch(`/api/admin/game-sessions/${session.code}/advance`, {
-            method: 'PATCH',
-            headers: { 'X-XSRF-TOKEN': getXsrfToken() },
-        });
+        const res = await fetch(
+            `/api/admin/game-sessions/${session.code}/advance`,
+            {
+                method: 'PATCH',
+                headers: { 'X-XSRF-TOKEN': getXsrfToken() },
+            },
+        );
 
         if (!res.ok) throw new Error('Failed to advance session');
 
@@ -143,6 +174,54 @@ export function useAdminSession(enabled: boolean) {
 
         return body.data as SessionInfo;
     }, [session]);
+
+    // Un-pauses the boss fight's current phase. Nothing in the fight moves
+    // until this is called - once for phase 1, then again after each phase
+    // is cleared.
+    const startBossPhase = useCallback(async () => {
+        if (!session) throw new Error('No active session');
+
+        const res = await fetch(
+            `/api/admin/game-sessions/${session.code}/boss/start`,
+            {
+                method: 'PATCH',
+                headers: { 'X-XSRF-TOKEN': getXsrfToken() },
+            },
+        );
+
+        if (!res.ok) throw new Error('Failed to start boss phase');
+
+        const body = await res.json();
+        setSession(body.data);
+
+        return body.data as SessionInfo;
+    }, [session]);
+
+    // Frees a team slot without touching the rest of the session. Joining
+    // needs only the room code, and leaving needs the player's own device
+    // token, so a squatted slot was previously only recoverable by deleting
+    // the whole session and handing out a new code mid-event.
+    const removePlayer = useCallback(
+        async (playerId: number) => {
+            if (!session) throw new Error('No active session');
+
+            const res = await fetch(
+                `/api/admin/game-sessions/${session.code}/players/${playerId}`,
+                {
+                    method: 'DELETE',
+                    headers: { 'X-XSRF-TOKEN': getXsrfToken() },
+                },
+            );
+
+            if (!res.ok) throw new Error('Failed to remove player');
+
+            const body = await res.json();
+            setSession(body.data);
+
+            return body.data as SessionInfo;
+        },
+        [session],
+    );
 
     const refresh = useCallback(() => {
         if (!session) return Promise.resolve(null);
@@ -171,6 +250,8 @@ export function useAdminSession(enabled: boolean) {
         error,
         createSession,
         advanceSession,
+        startBossPhase,
+        removePlayer,
         clearSession,
         refresh,
     };
