@@ -56,6 +56,15 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
     const myTeam = session?.teams.find((t) => t.id === team?.id);
     const isFinished = cutscene || session?.boss_finished_at != null;
 
+    // Phase 2/3 swap in their own puppet cutscene clip; anything else
+    // (including no session yet) falls back to the phase 1 clip.
+    const bossVideoSrc =
+        session?.boss_phase === 3
+            ? '/videos/puppetcodie3.webm'
+            : session?.boss_phase === 2
+              ? '/videos/puppetcodie2.webm'
+              : '/videos/puppetcodie.webm';
+
     useEffect(() => {
         if (session?.boss_finished_at) setCutscene(true);
     }, [session?.boss_finished_at]);
@@ -454,16 +463,14 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
 
                 <div className="left-32% absolute top-[40%] z-0 w-[24rem] -translate-y-1/2">
                     <video
+                        key={bossVideoSrc}
                         autoPlay
                         loop
                         muted
                         playsInline
                         className="block h-auto w-full"
                     >
-                        <source
-                            src="/videos/puppetcodie.webm"
-                            type="video/webm"
-                        />
+                        <source src={bossVideoSrc} type="video/webm" />
                     </video>
 
                     <div

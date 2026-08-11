@@ -53,6 +53,15 @@ export default function BossFightPage({ step, session, onStartPhase }: Props) {
 
     const phaseGateRef = useRef<HTMLDivElement>(null);
 
+    // Phase 2/3 swap in their own puppet cutscene clip; anything else
+    // (including no session yet) falls back to the phase 1 clip.
+    const bossVideoSrc =
+        session?.boss_phase === 3
+            ? '/videos/puppetcodie3.webm'
+            : session?.boss_phase === 2
+              ? '/videos/puppetcodie2.webm'
+              : '/videos/puppetcodie.webm';
+
     useEffect(() => {
         const hp = session?.boss_hp;
         const hpMax = session?.boss_hp_max;
@@ -448,13 +457,14 @@ export default function BossFightPage({ step, session, onStartPhase }: Props) {
 
             <div className="absolute left-[47%] top-[10%] z-0">
                 <video
+                    key={bossVideoSrc}
                     autoPlay
                     loop
                     muted
                     playsInline
                     className="block h-auto w-[24rem]"
                 >
-                    <source src="/videos/puppetcodie.webm" type="video/webm" />
+                    <source src={bossVideoSrc} type="video/webm" />
                 </video>
 
                 <div
