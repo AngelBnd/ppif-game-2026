@@ -8,11 +8,17 @@ import Bullets from '@/assets/monitor/bullets.svg?react';
 import Taptap from '@/assets/monitor/taptap.svg?react';
 import Thing from '@/assets/monitor/things.svg?react';
 import Streak from '@/assets/phone/STREAKBG.svg?react';
+import TungguPIC from '@/assets/phone/TungguPIC.svg?react';
 import LightingStrike from '@/assets/svgs/LIGHTINGSTRIKE.svg?react';
-import Tapmanajaa from '@/assets/svgs/tapmanajaa.svg?react';
 import type { BossTapResult, SessionInfo } from '@/types/gameSession';
 import type { Step } from '@/types/step';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+    type MouseEvent,
+    useEffect,
+    useLayoutEffect,
+    useRef,
+    useState,
+} from 'react';
 
 import gsap from 'gsap';
 
@@ -36,7 +42,11 @@ type Props = {
 export default function BossFightPage({ step, session, team, onTap }: Props) {
     const containerRef = useRef<HTMLElement>(null);
     const pendingTapsRef = useRef(0);
+    const fireAttackIdRef = useRef(0);
     const [cutscene, setCutscene] = useState(false);
+    const [fireAttacks, setFireAttacks] = useState<
+        { id: number; x: number; y: number }[]
+    >([]);
     // Placeholder instructional overlay ("offer informative feedback" before
     // asking players to act) - frontend to restyle/animate this later.
     const [showIntro, setShowIntro] = useState(true);
@@ -55,6 +65,15 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
     );
     const myTeam = session?.teams.find((t) => t.id === team?.id);
     const isFinished = cutscene || session?.boss_finished_at != null;
+
+    // Phase 2/3 swap in their own puppet cutscene clip; anything else
+    // (including no session yet) falls back to the phase 1 clip.
+    const bossVideoSrc =
+        session?.boss_phase === 3
+            ? '/videos/puppetcodie3.webm'
+            : session?.boss_phase === 2
+              ? '/videos/puppetcodie2.webm'
+              : '/videos/puppetcodie.webm';
 
     useEffect(() => {
         if (session?.boss_finished_at) setCutscene(true);
@@ -110,7 +129,24 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
     const introLightingRef = useRef<HTMLDivElement>(null);
     const introChatCodie1Ref = useRef<HTMLDivElement>(null);
     const introChatCodie2Ref = useRef<HTMLDivElement>(null);
-    const introTapmanajaaRef = useRef<HTMLDivElement>(null);
+    const tungguPICref = useRef<HTMLDivElement>(null);
+
+    const phaseTexts: Record<number, { line1: string; line2: string }> = {
+        1: {
+            line1: 'TAP LAYAR SECEPAT MUNGKIN!',
+            line2: 'Semua anggota tim dapat ikut untuk membantu!',
+        },
+        2: {
+            line1: 'Puppet Codie masih belum terkalahkan!',
+            line2: 'Ayo kita terus berjuang, teman-teman!',
+        },
+        3: {
+            line1: 'Waduh, dia sudah mencapai final form!',
+            line2: 'Mari kita terus berjuang, teman-teman!',
+        },
+    };
+    const currentPhaseText =
+        phaseTexts[session?.boss_phase ?? 1] ?? phaseTexts[1];
 
     useLayoutEffect(() => {
         gsap.set(streakRef.current, {
@@ -247,7 +283,7 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
     // Guarded on phaseStarted too: the intro is only rendered once the
     // fight is live, so its refs are null while the gate is up.
     useLayoutEffect(() => {
-        if (!showIntro || !phaseStarted) return;
+        if (phaseStarted) return;
 
         const ctx = gsap.context(() => {
             gsap.set(introLightingRef.current, {
@@ -257,7 +293,7 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
                 xPercent: -30,
                 autoAlpha: 0,
             });
-            gsap.set(introTapmanajaaRef.current, { autoAlpha: 0 });
+            gsap.set(tungguPICref.current, { autoAlpha: 0 });
 
             const tl = gsap.timeline();
 
@@ -277,13 +313,13 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
                     },
                     '<0.1',
                 )
-                .to(introTapmanajaaRef.current, {
+                .to(tungguPICref.current, {
                     autoAlpha: 1,
                     duration: 0.35,
                     ease: 'power2.out',
                 })
 
-                .to(introTapmanajaaRef.current, {
+                .to(tungguPICref.current, {
                     autoAlpha: 0.15,
                     duration: 0.6,
                     repeat: -1,
@@ -293,10 +329,24 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
         }, containerRef);
 
         return () => ctx.revert();
-    }, [showIntro, phaseStarted]);
+    }, [phaseStarted]);
 
-    const handleFireTap = () => {
+    const handleFireTap = (event: MouseEvent<HTMLDivElement>) => {
         if (isFinished || !phaseStarted) return;
+
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const fireAttack = {
+            id: fireAttackIdRef.current++,
+            x: event.clientX - bounds.left,
+            y: event.clientY - bounds.top,
+        };
+
+        setFireAttacks((current) => [...current, fireAttack]);
+        setTimeout(() => {
+            setFireAttacks((current) =>
+                current.filter((attack) => attack.id !== fireAttack.id),
+            );
+        }, 450);
 
         // First tap doubles as "dismiss the instructions" - still counts
         // toward the boss's HP, no wasted tap.
@@ -362,6 +412,16 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
                 className="relative h-full w-full max-w-[430px] overflow-hidden"
                 onClick={handleFireTap}
             >
+                {fireAttacks.map((attack) => (
+                    <img
+                        key={attack.id}
+                        src="/activity/fire-attack.png"
+                        alt=""
+                        className="pointer-events-none absolute z-[75] w-24 -translate-x-1/2 -translate-y-1/2 animate-ping"
+                        style={{ left: attack.x, top: attack.y }}
+                    />
+                ))}
+
                 <div className="relative top-4 z-40 flex w-full flex-col">
                     <div className="relative w-full" ref={bossHealthRef}>
                         <Bosshealth className="block h-auto w-full" />
@@ -391,7 +451,7 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
                 {/* PLACEHOLDER styling - frontend team to restyle. Shown
                     whenever the fight is waiting on the PIC's START press:
                     before phase 1, and again after each cleared phase. */}
-                {!phaseStarted && !isFinished && (
+                {/* {!phaseStarted && !isFinished && (
                     <div
                         ref={phaseGateRef}
                         className="pointer-events-none absolute inset-0 z-[70] flex justify-center"
@@ -408,9 +468,9 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
                             </p>
                         </div>
                     </div>
-                )}
+                )} */}
 
-                {showIntro && phaseStarted && !isFinished && (
+                {!phaseStarted && !isFinished && (
                     // PLACEHOLDER - frontend team to redesign/restyle this.
                     // Tells players what to do before they need to do it
                     // (Shneiderman's "offer informative feedback").
@@ -425,21 +485,18 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
                             ref={introChatCodie1Ref}
                             className="-ml-3"
                             textClassName="top-10 h-[4rem] text-2xl"
-                            text="TAP LAYAR SECEPAT MUNGKIN!"
+                            text={currentPhaseText.line1}
                         />
 
                         <ChatCodieBubble
                             ref={introChatCodie2Ref}
                             className="ml-4"
-                            textClassName="top-12 h-[4rem] text-lg"
-                            text="Semua anggota tim dapat ikut untuk membantu!"
+                            textClassName="top-12 h-[4rem] text-2xl"
+                            text={currentPhaseText.line2}
                         />
 
-                        <div
-                            ref={introTapmanajaaRef}
-                            className="relative mt-16"
-                        >
-                            <Tapmanajaa />
+                        <div ref={tungguPICref} className="relative mt-16">
+                            <TungguPIC />
                         </div>
                     </div>
                 )}
@@ -454,16 +511,16 @@ export default function BossFightPage({ step, session, team, onTap }: Props) {
 
                 <div className="left-32% absolute top-[40%] z-0 w-[24rem] -translate-y-1/2">
                     <video
+                        key={bossVideoSrc}
                         autoPlay
                         loop
+                        draggable={false}
                         muted
                         playsInline
-                        className="block h-auto w-full"
+                        tabIndex={-1}
+                        className="block h-auto w-full outline-none [-webkit-tap-highlight-color:transparent]"
                     >
-                        <source
-                            src="/videos/puppetcodie.webm"
-                            type="video/webm"
-                        />
+                        <source src={bossVideoSrc} type="video/webm" />
                     </video>
 
                     <div

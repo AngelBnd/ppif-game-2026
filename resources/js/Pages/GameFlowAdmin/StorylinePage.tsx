@@ -10,7 +10,8 @@ export default function StorylinePage({ step }: Props) {
     const { panels, triggers } = getStorylineConfig(step.slug);
 
     return (
-        <main className="relative min-h-screen overflow-hidden bg-[#1a1a1a] text-white">
+        <main className="relative min-h-screen overflow-hidden text-white">
+            <div className="absolute inset-0 z-0 h-screen w-screen bg-[#0A0C0F] opacity-50" />
             <p className="absolute left-8 top-8 z-40 text-sm uppercase tracking-[0.3em] text-white/50">
                 {step.title}
             </p>

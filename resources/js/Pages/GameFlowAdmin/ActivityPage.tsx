@@ -1,7 +1,9 @@
 import ActivityBox from '@/assets/monitor/ActivityPleaseFollowModulesInstruction.svg?react';
 import BGCheck from '@/assets/monitor/BGCheck.svg?react';
+import Epilogue11 from '@/assets/storyline/epi/s11.webp';
 import type { Step } from '@/types/step';
 
+import DialogueBox from '@/Components/monitor/dialogueBox';
 import gsap from 'gsap';
 import { useLayoutEffect, useRef } from 'react';
 
@@ -68,7 +70,26 @@ export default function ActivityPage({ step }: Props) {
             </div>
 
             <div ref={activityBoxRef} className="absolute">
-                <ActivityBox className="block w-[60rem]" />
+                {step.slug === 'activity-4' ? (
+                    <div className="w-[90vw]">
+                        <DialogueBox
+                            msg={
+                                'Terima kasih sudah menyelematkan Puppet Universe, Variants! Sampai jumpa!'
+                            }
+                            classNameSizeBox="!w-full !h-auto "
+                            classNameIdentitySize="!w-[4rem]"
+                            className="absolute bottom-[15%] left-[30%]"
+                        />
+                        <img
+                            src={Epilogue11}
+                            alt=""
+                            draggable={false}
+                            className="block w-[90vw] select-none"
+                        />
+                    </div>
+                ) : (
+                    <ActivityBox className="block w-[60rem]" />
+                )}
             </div>
         </main>
     );
