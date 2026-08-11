@@ -1,3 +1,4 @@
+import PhaseGateOverlay from '@/Components/monitor/PhaseGateOverlay';
 import BossHealthBar from '@/Components/monitor/BossHealth';
 import { TeamHP } from '@/Components/monitor/TeamHP';
 import BOSS from '@/assets/monitor/BOSS.svg?react';
@@ -36,6 +37,9 @@ export default function BossFightPage({ step, session, onStartPhase }: Props) {
     const [isStarting, setIsStarting] = useState(false);
     const [startError, setStartError] = useState(false);
     const [pressState, setPressState] = useState<'idle' | 'press'>('idle');
+
+    // State untuk menandai animasi teks bos selesai
+    const [isBossIntroDone, setIsBossIntroDone] = useState(false);
 
     // The HP bar shown on screen lags behind the live session state across a
     // phase change - held at the old phase's numbers for as long as the
@@ -80,6 +84,12 @@ export default function BossFightPage({ step, session, onStartPhase }: Props) {
         onStartPhase()
             .catch(() => setStartError(true))
             .finally(() => setIsStarting(false));
+
+        // GANTI DENGAN MOCK SUCCESS INI
+        // setTimeout(() => {
+        //     console.log("Berhasil pura-pura memanggil backend!");
+        //     setIsStarting(false);
+        // }, 500);
     };
 
     const codieRef = useRef<HTMLDivElement>(null);
@@ -228,16 +238,21 @@ export default function BossFightPage({ step, session, onStartPhase }: Props) {
         return () => ctx.revert();
     }, []);
 
-    useLayoutEffect(() => {
-        const container = bossIntroContainerRef.current;
-        const overlay = bossOverlayRef.current;
-        const bossGroup = bossGroupRef.current;
-        const fight = fightRef.current;
+        useLayoutEffect(() => {
+            const container = bossIntroContainerRef.current;
+            const overlay = bossOverlayRef.current;
+            const bossGroup = bossGroupRef.current;
+            const fight = fightRef.current;
 
-        if (!container || !overlay || !bossGroup || !fight) return;
+        if (!container || !overlay || !bossGroup || !fight) {
+            setIsBossIntroDone(true); // Fallback aman
+            return;
+        }
 
         const ctx = gsap.context(() => {
-            const timeline = gsap.timeline();
+            const timeline = gsap.timeline({
+                onComplete: () => setIsBossIntroDone(true) 
+            });
 
             timeline
                 // Fade in the black overlay
@@ -405,54 +420,15 @@ export default function BossFightPage({ step, session, onStartPhase }: Props) {
                 ))}
             </div>
 
-            {/* PLACEHOLDER styling - frontend team to restyle. The gate
-                itself is functional: nothing in the fight moves until the
-                PIC presses START, once per phase.
-
-                z-46 sits above the fight visuals and the "defeated" overlay
-                but below the Next / Clear Session buttons (z-50), so the PIC
-                can still advance or bail out while a phase is paused. */}
+            {/* Phase transition UI: Plays intro -> static wait -> outro on click -> handleStartPhase */}
             {!phaseStarted && !isFinished && (
-                <div
-                    ref={phaseGateRef}
-                    className="absolute inset-0 z-[46] flex justify-center"
-                >
-                    <div className="absolute inset-0 z-20 h-screen w-screen bg-[#0A0C0F] opacity-80" />
-                    <div className="absolute top-1/2 z-50 flex -translate-y-1/2 flex-col items-center gap-4">
-                        <p className="font-noto text-6xl font-bold text-red-400">
-                            {session?.boss_phase === 3
-                                ? 'FINAL PHASE'
-                                : `PHASE ${session?.boss_phase ?? 1}`}
-                        </p>
-                        <p className="font-arsenal text-lg text-white/60">
-                            Peserta sedang menunggu - tekan START untuk memulai
-                            phase ini.
-                        </p>
-
-                        <button
-                            type="button"
-                            onClick={handleStartPhase}
-                            disabled={isStarting || !session}
-                            className={`mt-2 w-[18rem] rotate-[2deg] cursor-pointer transition-transform duration-150 disabled:cursor-not-allowed disabled:opacity-60 ${
-                                pressState === 'press'
-                                    ? 'scale-90'
-                                    : 'hover:scale-105 active:scale-90'
-                            }`}
-                        >
-                            <img
-                                src="/starting-page/START_TEXT.svg"
-                                alt="Start"
-                                className="pointer-events-none h-auto w-full"
-                            />
-                        </button>
-
-                        {startError && (
-                            <p className="font-arsenal text-sm text-red-400">
-                                Gagal memulai phase - coba tekan START lagi.
-                            </p>
-                        )}
-                    </div>
-                </div>
+                <PhaseGateOverlay 
+                    session={session}
+                    isStarting={isStarting}
+                    startError={startError}
+                    onStartPhase={handleStartPhase}
+                    isIntroDone={isBossIntroDone}
+                />  
             )}
 
             {isFinished && (
