@@ -4,7 +4,7 @@ import TopBar from '@/Components/global/TopBar';
 import ModelBackground from '@/Components/three/ModelBackground';
 import type { ReactNode } from 'react';
 
-type BackgroundPreset = 'home' | 'about' | 'timeline' | 'contact';
+type BackgroundPreset = 'home';
 
 type AppLayoutProps = {
     children: ReactNode;

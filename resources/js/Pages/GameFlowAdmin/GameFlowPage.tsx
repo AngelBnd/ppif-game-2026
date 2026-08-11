@@ -13,7 +13,7 @@ import AdminLoginPage from './AdminLoginPage';
 import AnswerTheQuestionPage from './AnswerTheQuestionPage';
 import BossFightPage from './BossFightPage';
 import StorylinePage from './StorylinePage';
-import WaitingRoompage from './WaitingRoomPage';
+import WaitingRoompage from './WaitingRoompage';
 
 const isDev = import.meta.env.DEV;
 
