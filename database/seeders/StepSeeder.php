@@ -13,7 +13,10 @@ class StepSeeder extends Seeder
      * everywhere.
      */
     private const DISTRACTOR_POOL = [
-        ['Arsip kuno Hope Universe', 'Arsip Kuno Dunia Sekarang', 'Arsip Kuno Dark Universe'], ['Kegelapan lagi', 'Bintang-bintang yang besar' , 'Rintikan air yang kilau' ], ['Gelap dan sering berubah', 'Berwarna-warni dan berisik' , 'Monotone dan berisik' ], ['Berdansa', 'Berenang' , 'Berjalan' ]
+        ['Arsip kuno Hope Universe', 'Arsip Kuno Dunia Sekarang', 'Arsip Kuno Dark Universe'],
+        ['Kegelapan lagi', 'Bintang-bintang yang besar', 'Rintikan air yang kilau'],
+        ['Gelap dan sering berubah', 'Berwarna-warni dan berisik', 'Monotone dan berisik'],
+        ['Berdansa', 'Berenang', 'Berjalan']
     ];
 
     /**
@@ -27,7 +30,7 @@ class StepSeeder extends Seeder
         $pool = self::DISTRACTOR_POOL[$questionIndex] ?? [];
 
         $distractors = collect($pool)
-            ->reject(fn (string $d) => $d === $correctAnswer)
+            ->reject(fn(string $d) => $d === $correctAnswer)
             ->shuffle()
             ->take(3)
             ->all();
@@ -111,9 +114,9 @@ class StepSeeder extends Seeder
                 'title' => 'Answer The Question 2',
                 'content' => [
                     'question' => 'Apa yang menjadi ciri-ciri dari Universe Change?',
-                    'opts' => $this->randomizedOpts('Terang dan damai', 2),
+                    'opts' => $this->randomizedOpts('Terang dan ramai', 2),
                 ],
-                'correct_answer' => 'Terang dan damai',
+                'correct_answer' => 'Terang dan ramai',
                 'time_limit_seconds' => Step::DEFAULT_TIME_LIMIT_SECONDS,
             ],
             [

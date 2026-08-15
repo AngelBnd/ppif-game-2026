@@ -13,14 +13,18 @@ import AdminLoginPage from './AdminLoginPage';
 import AnswerTheQuestionPage from './AnswerTheQuestionPage';
 import BossFightPage from './BossFightPage';
 import StorylinePage from './StorylinePage';
-import WaitingRoompage from './WaitingRoompage';
+import WaitingRoompage from './WaitingRoomPage';
 
 const isDev = import.meta.env.DEV;
 
 // Mirrors GameSession::BOSS_PHASE_MAX_HP on the backend - dev-preview only,
 // so the boss step can be looked at via devNav without a live session that's
 // actually on the boss step (which only the real advance() call sets up).
-const DEV_BOSS_PHASE_MAX_HP: Record<number, number> = { 1: 120, 2: 180, 3: 300 };
+const DEV_BOSS_PHASE_MAX_HP: Record<number, number> = {
+    1: 120,
+    2: 180,
+    3: 300,
+};
 
 // PIC accounts are seeded with both their name ("PIC Kelompok 9/10") and
 // email (iniAkunBuatKel9.10@gmail.com) encoding which two groups they run -
@@ -237,7 +241,9 @@ export default function AdminFlowPage() {
     // state. Preview that state locally instead, so nothing needs to touch
     // the session row to look at this screen.
     const isPreviewingBoss =
-        isDev && step.type === 'boss' && session.current_step?.slug !== step.slug;
+        isDev &&
+        step.type === 'boss' &&
+        session.current_step?.slug !== step.slug;
 
     const previewBossSession: SessionInfo = {
         ...session,
@@ -256,7 +262,10 @@ export default function AdminFlowPage() {
     // fight never writes to the DB.
     const devStartBossPhase = async () => {
         setDevBossPhaseStarted(true);
-        return { ...previewBossSession, boss_phase_started_at: new Date().toISOString() };
+        return {
+            ...previewBossSession,
+            boss_phase_started_at: new Date().toISOString(),
+        };
     };
 
     const confirmClearSession = async () => {
