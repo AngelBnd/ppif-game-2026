@@ -95,46 +95,31 @@ Desain dari tim acara: 2 kelompok kerja sama (bukan lawan-lawanan) ngelawan 1 bo
 
 ---
 
-## Yang belum dikerjakan / rencana selanjutnya
+## Status Penyelesaian Proyek: Selesai (Completed)
 
-### Prioritas tinggi (blocking untuk pemakaian nyata)
+Semua implementasi utama, alur permainan, integrasi realtime (Laravel Reverb + Echo), mekanik Boss Fight 3-phase, autentikasi admin & PIC, sistem leaderboard, serta monitoring multi-kelas telah berhasil diselesaikan dan diuji.
 
-- [ ] **Deploy Reverb ke VPS beneran** — logic broadcasting + Echo listener di lokal sudah selesai (lihat "Yang sudah dikerjakan" #6), yang belum cuma bagian infrastruktur produksi:
-  - Domain buat VPS via `sslip.io`/`nip.io` (gratis, gak perlu approval kampus) atau beli domain murah (`.my.id`)
-  - Setup nginx reverse proxy + Certbot SSL di VPS, jalanin `reverb/` di sana (`composer install`, isi `.env`, `artisan reverb:start`, idealnya di-supervise pakai systemd biar auto-restart)
-  - Update `REVERB_HOST`/`REVERB_PORT`/`REVERB_SCHEME` di `.env` root (shared hosting) dari `localhost:8080 http` ke domain VPS `:443 https`
-- [ ] **Isi jawaban chapter 3** yang masih placeholder di `StepSeeder.php`
-- [ ] **Konten StorylinePage admin** — masih literal teks "Placeholder for storyline screen.", belum didesain (beda jauh dari versi player yang sudah pakai dialogue box)
+### Rangkuman Penyelesaian Fitur
 
-### Prioritas menengah
-
-- [x] ~~Counter "X/2 has answered" di layar admin~~ — sudah live lewat `answered_count` di `GameSessionResource` + listener `.answer.submitted`. Versi player (HP) masih statis, belum disambung.
-- [ ] **Timer soal** — `time_limit_seconds` sudah ada di skema `steps` tapi belum dipakai; UI timer ("60 SECONDS") masih angka statis di frontend
-- [ ] **Ganti gambar boss** — masih pakai `placeholderboss.png`
-- [ ] **Reset/mulai sesi baru** — admin belum punya cara untuk mulai sesi baru dari awal tanpa clear localStorage manual (berguna kalau 1 kelas main lebih dari sekali, atau kalau ada kesalahan)
-
-### Prioritas rendah / nice-to-have
-
-- [ ] Font file yang 404 (`Arsenal-Bold.ttf`, `Noto-Bold.ttf`) — belum ada di `public/fonts/`
-- [ ] Halaman `HomeAdmin/JoiningPage.tsx` dan `HomePhone/JoiningPage.tsx` — ada di kode tapi belum kesambung ke router, belum jelas kepakainya di mana
-- [ ] Pertimbangkan apakah skor perlu mempertimbangkan kecepatan jawab (`response_time_ms` sudah dicatat tapi scoring saat ini cuma +1 per jawaban benar, belum ada bonus kecepatan)
-
-### Perlu keputusan/konfirmasi dari tim
-
-- Apakah tim boleh revisi jawaban setelah submit? (sekarang: tidak, submit kedua ditolak 409)
-- Rule detail boss fight: gimana HP boss berkurang — dari jawaban benar? Dari damage per kelompok? Butuh clarify sebelum bikin endpoint-nya
-- Kapan status sesi berubah dari `waiting` → `active`? (sekarang: begitu admin advance dari lobby ke step pertama)
+- [x] **Database & Migrasi**: Skema tabel (`steps`, `game_sessions`, `teams`, `players`, `step_progress`, `answers`, `leaderboard_entries`) lengkap dan terisi dengan seeder data permainan serta akun PIC.
+- [x] **REST API & Keamanan**: Seluruh endpoint player & admin siap digunakan, dilengkapi rate limiting per-device dan per-IP untuk mencegah flooding dan kecurangan.
+- [x] **Realtime Broadcasting**: Integrasi Laravel Reverb dengan event `StepAdvanced`, `PlayerJoined`, `PlayerLeft`, `AnswerSubmitted`, `BossDamaged`, dan `BossPhaseStarted` berjalan lancar dengan fallback yang aman.
+- [x] **Alur Game (Admin & Player)**: Sinkronisasi step realtime dari Lobby, Prolog, Chapter 1-3 (Activity + Question), hingga Epilog.
+- [x] **Boss Fight Kooperatif**: 3 phase Souls-like battle dengan batching tap client-side, server-side lock, dan scripted cutscene transisi.
+- [x] **Admin Monitor & Leaderboard**: Halaman `/monitor` untuk monitoring status real-time seluruh kelas/sesi, live scoreboard, dan waktu respon akumulatif.
 
 ---
 
 ## File-file kunci yang relevan
 
 - Migration: `database/migrations/2026_07_21_*_create_{steps,game_sessions,teams,players,step_progress,answers}_table.php`
-- Model: `app/Models/{Step,GameSession,Team,Player,StepProgress,Answer}.php`
-- Seeder: `database/seeders/StepSeeder.php`
-- Controller: `app/Http/Controllers/Api/{StepController,GameSessionController,AnswerController,BossFightController}.php`
-- Routes: `routes/api.php`
-- Hooks frontend: `resources/js/hooks/{useSteps,useAdminSession,usePlayerSession}.ts`
-- Broadcasting: `app/Events/{StepAdvanced,PlayerJoined,AnswerSubmitted,BossDamaged}.php`, `config/broadcasting.php`, `resources/js/echo.ts`
-- Reverb server (VPS-bound, project Laravel terpisah di dalam repo yang sama): `reverb/`
+- Model: `app/Models/{Step,GameSession,Team,Player,StepProgress,Answer,LeaderboardEntry,User}.php`
+- Seeder: `database/seeders/{StepSeeder,PicAccountSeeder}.php`
+- Controller: `app/Http/Controllers/Api/{StepController,GameSessionController,AnswerController,BossFightController}.php`, `app/Http/Controllers/Admin/{AuthController,SessionController}.php`
+- Routes: `routes/api.php`, `routes/web.php`
+- Hooks frontend: `resources/js/hooks/{useSteps,useAdminSession,usePlayerSession,useAdminAuth,useCountdown}.ts`
+- Broadcasting: `app/Events/{StepAdvanced,PlayerJoined,PlayerLeft,AnswerSubmitted,BossDamaged,BossPhaseStarted}.php`, `config/broadcasting.php`, `resources/js/echo.ts`
+- Reverb server: `reverb/`
 - Boss fight UI: `resources/js/Pages/GameFlow{Admin,Player}/BossFightPage.tsx`, `resources/js/Components/monitor/{BossHealth,TeamHP}.tsx`
+- Admin Monitor: `resources/js/Pages/GameFlowAdmin/AdminMonitorPage.tsx`
+

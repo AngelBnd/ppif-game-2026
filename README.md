@@ -1,58 +1,191 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# PPIF 2026 - Interactive Multi-Classroom Battle Game
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+An interactive, real-time web application engineered for the **PPIF 2026** (Pekan Perkenalan Informatika Fakultas / HMIF Universitas Multimedia Nusantara) orientation event. 
 
-## About Laravel
+This game facilitates asynchronous classroom sessions managed by class PICs (Admins) from a projector, while participants (Players) join via their smartphones using a 6-digit PIN to compete in team-based trivia and unite in an intense cooperative 3-phase boss battle.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 🚀 Key Features
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **Asynchronous Multi-Classroom Sessions**: Each classroom runs an isolated game session identified by a unique 6-digit PIN.
+- **Dynamic Team Assignment**: Players join without passwords and are automatically balanced into two competing teams (Team A & Team B).
+- **Interactive Story & Trivia System**:
+  - Immersive storyline progression and activities.
+  - Multiple-choice trivia with randomized option ordering.
+  - Server-side response time calculation (`response_time_ms`) and duplicate submission protection.
+- **Cooperative 3-Phase Boss Battle**:
+  - Soul-like boss encounter where both teams mash taps simultaneously to defeat the boss.
+  - Client-side tap batching (flushed every ~300ms) with server-side locks and throttled broadcasts.
+  - Seamless phase transitions and scripted cinematic cutscenes.
+- **Central Live Monitor & Leaderboard (`/monitor`)**:
+  - Real-time dashboard for event organizers to monitor all active classrooms, live scoreboards, and accumulated response speeds.
+- **High-Performance Realtime Engine**: Powered by **Laravel Reverb WebSockets** with **Laravel Echo** for instant state synchronization with graceful HTTP fallbacks.
+- **Immersive Visuals**: Cyberpunk-inspired aesthetic built with **Tailwind CSS**, **GSAP** micro-animations, and **Three.js** 3D backgrounds with custom shader post-processing.
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## 🛠️ Tech Stack
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- **Backend**: Laravel 11/12/13 (PHP 8.3+), MySQL / SQLite
+- **Realtime Relay**: Laravel Reverb (WebSocket server located in `/reverb`)
+- **Frontend**: React 18, TypeScript, Vite, React Router v7
+- **Styling & Animation**: Tailwind CSS, GSAP, Three.js
+- **State Sync**: Laravel Echo, Pusher-JS
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+---
 
-## Agentic Development
+## 📋 Prerequisites
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+Ensure you have the following installed on your machine:
+- **PHP**: `>= 8.3` (with `pdo`, `mbstring`, `curl`, `openssl`, `fileinfo` extensions enabled)
+- **Composer**: `>= 2.0`
+- **Node.js**: `>= 18.x` & **npm**
+- **Database**: MySQL `>= 8.0` or MariaDB (SQLite can also be used for local testing)
 
+---
+
+## ⚙️ Installation & Setup
+
+### 1. Clone the Repository
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+git clone https://github.com/HMIF-UMN/PPIF2026-GAME.git
+cd PPIF2026-GAME
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+### 2. Install Dependencies
+Install PHP dependencies for both the main application and the standalone Reverb server, followed by Node.js packages:
 
-## Contributing
+```bash
+# Install root application dependencies
+composer install
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+# Install Reverb relay server dependencies
+cd reverb && composer install && cd ..
 
-## Code of Conduct
+# Install frontend dependencies
+npm install
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### 3. Configure Environment Variables
+Copy `.env.example` to `.env` and configure your database and Reverb keys:
 
-## Security Vulnerabilities
+```bash
+cp .env.example .env
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Generate the application encryption key:
+```bash
+php artisan key:generate
+```
 
-## License
+Configure your database connection in `.env`:
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=ppif_game
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Ensure Reverb credentials match between root `.env` and `reverb/.env`:
+```env
+BROADCAST_CONNECTION=reverb
+REVERB_APP_ID=100001
+REVERB_APP_KEY=ppif2026key
+REVERB_APP_SECRET=ppif2026secret
+REVERB_HOST=localhost
+REVERB_PORT=8080
+REVERB_SCHEME=http
+
+VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
+VITE_REVERB_HOST="${REVERB_HOST}"
+VITE_REVERB_PORT="${REVERB_PORT}"
+VITE_REVERB_SCHEME="${REVERB_SCHEME}"
+```
+
+*(If `reverb/.env` does not exist, copy `reverb/.env.example` to `reverb/.env` and paste the same `REVERB_APP_*` keys.)*
+
+### 4. Run Migrations & Seeders
+Execute database migrations and populate game steps and PIC accounts:
+
+```bash
+php artisan migrate:fresh --seed
+```
+> **Note**: This will seed 16 default game steps via `StepSeeder` and pre-configured PIC accounts via `PicAccountSeeder`.
+
+---
+
+## 🏃 Running the Application
+
+### Option A: All-in-One Development Command (Recommended)
+You can start all processes (Laravel API server, Vite dev server, Queue worker, Pail log viewer, and Reverb WebSocket server) concurrently with a single command:
+
+```bash
+composer run dev
+```
+
+### Option B: Running Processes Manually (Separate Terminals)
+If you prefer running services individually:
+
+1. **Terminal 1 - Laravel Server**:
+   ```bash
+   php artisan serve
+   ```
+2. **Terminal 2 - Vite Frontend**:
+   ```bash
+   npm run dev
+   ```
+3. **Terminal 3 - Reverb WebSocket Server**:
+   ```bash
+   php reverb/artisan reverb:start
+   ```
+4. **Terminal 4 - Queue Worker**:
+   ```bash
+   php artisan queue:listen
+   ```
+
+---
+
+## 🎮 Accessing Game Portals
+
+Once the dev servers are running, access the portals through your browser:
+
+- **Participant / Player Screen (Mobile View)**:
+  `http://localhost:8000/player/lobby`
+- **Classroom Admin / PIC Screen (Projector View)**:
+  `http://localhost:8000/admin/lobby`
+- **Central Organizer Monitor & Leaderboard**:
+  `http://localhost:8000/monitor`
+
+---
+
+## 📁 Project Structure Overview
+
+```text
+├── app/
+│   ├── Events/                 # Realtime WebSocket broadcast events
+│   ├── Http/Controllers/
+│   │   ├── Admin/              # PIC authentication & session lifecycle controllers
+│   │   └── Api/                # Game session, steps, answer submission, & boss fight APIs
+│   └── Models/                 # Eloquent models (GameSession, Team, Player, Step, Answer, etc.)
+├── database/
+│   ├── migrations/             # Database tables schema
+│   └── seeders/                # Master game steps and PIC account seeders
+├── resources/js/
+│   ├── Components/             # UI widgets, 3D Three.js backgrounds & monitoring panels
+│   ├── hooks/                  # React hooks for API and WebSocket subscriptions
+│   ├── Pages/
+│   │   ├── GameFlowAdmin/      # Admin presentation views (Lobby, Questions, Boss, Monitor)
+│   │   └── GameFlowPlayer/     # Mobile player views (Join, Questions, Boss tap screen)
+│   ├── routes/AppRouters.tsx   # React Router definition
+│   └── echo.ts                 # Laravel Echo WebSocket client configuration
+└── reverb/                     # Dedicated lightweight Reverb WebSocket server
+```
+
+---
+
+## 👥 Credits
+
+Developed and Designed by **INTERFACE - PPIF 2026**
